@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RangeError {
 	ParsingError(String),
 }
@@ -6,7 +6,7 @@ pub enum RangeError {
 impl std::fmt::Display for RangeError {
 	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 		match self {
-			RangeError::ParsingError(error) => write!(f, "Parsing error: {}", error),
+			RangeError::ParsingError(error) => write!(f, "{error}"),
 		}
 	}
 }
@@ -17,7 +17,16 @@ pub enum Ranges {
 	Scalar(u64),
 }
 
-#[derive(Debug)]
+impl std::fmt::Display for Ranges {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		match self {
+			Ranges::Range { from, to } => write!(f, "{from}-{to}"),
+			Ranges::Scalar(value) => write!(f, "{value}"),
+		}
+	}
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Range {
 	numbers: Vec<u64>,
 }
@@ -38,49 +47,41 @@ impl Range {
 	}
 
 	pub fn get_range(&self) -> Vec<Ranges> {
-		let mut output = Vec::new();
-		let mut start_range = None;
-		let mut iterations = 0;
-
-		if self.numbers.len() == 1 {
-			return vec![Ranges::Scalar(self.numbers[0])];
-		}
+		let mut result = Vec::new();
 
 		for num in &self.numbers {
-			if start_range.is_none() {
-				start_range = Some(*num);
-			} else if let Some(start) = start_range {
-				iterations += 1;
-				println!("start={start} num={num} iterations={iterations} range={}", *num == start + iterations);
-				if start != *num - iterations {
-					println!("!!!");
-					if start < *num && *num == start + iterations {
-						output.push(Ranges::Range { from: start, to: *num });
-					} else {
-						output.push(Ranges::Scalar(start));
-					}
-					start_range = Some(*num);
-					iterations = 0;
-				}
+			if result.is_empty() {
+				// very first iteration
+				result.push(Ranges::Scalar(*num));
+			} else {
+				// every other iteration
+				match result.pop().unwrap() {
+					Ranges::Scalar(last_num) => {
+						// are we within a range?
+						if last_num + 1 == *num {
+							result.push(Ranges::Range {
+								from: last_num,
+								to: *num,
+							});
+						} else {
+							result.push(Ranges::Scalar(last_num));
+							result.push(Ranges::Scalar(*num));
+						}
+					},
+					Ranges::Range { from, to } => {
+						// are we within a range?
+						if to + 1 == *num {
+							result.push(Ranges::Range { from, to: *num });
+						} else {
+							result.push(Ranges::Range { from, to });
+							result.push(Ranges::Scalar(*num));
+						}
+					},
+				};
 			}
 		}
 
-		println!(
-			"start={start_range:?} num={} iterations={iterations} range={}",
-			self.numbers[self.numbers.len() - 1],
-			self.numbers[self.numbers.len() - 1] == start_range.unwrap() + iterations
-		);
-		if let Some(start) = start_range {
-			if start < self.numbers[self.numbers.len() - 1] && self.numbers[self.numbers.len() - 1] == start + iterations {
-				output.push(Ranges::Range {
-					from: start,
-					to: self.numbers[self.numbers.len() - 1],
-				});
-			} else {
-				output.push(Ranges::Scalar(self.numbers[self.numbers.len() - 1]));
-			}
-		}
-		output
+		result
 	}
 }
 
@@ -102,12 +103,26 @@ mod test {
 		let range = Range::new("1").unwrap();
 		assert_eq!(range.get_range(), vec![Ranges::Scalar(1)]);
 
+		let range = Range::new("1,3,10,20").unwrap();
+		assert_eq!(
+			range.get_range(),
+			vec![
+				Ranges::Scalar(1),
+				Ranges::Scalar(3),
+				Ranges::Scalar(10),
+				Ranges::Scalar(20),
+			]
+		);
+
 		let range = Range::new("5,3,1").unwrap();
 		assert_eq!(range.get_range(), vec![Ranges::Scalar(1), Ranges::Scalar(3), Ranges::Scalar(5)]);
 	}
 
 	#[test]
 	fn mixed_test() {
+		let range = Range::new("1,3,4").unwrap();
+		assert_eq!(range.get_range(), vec![Ranges::Scalar(1), Ranges::Range { from: 3, to: 4 },]);
+
 		let range = Range::new("1,3,4,8,10").unwrap();
 		assert_eq!(
 			range.get_range(),
@@ -115,11 +130,67 @@ mod test {
 				Ranges::Scalar(1),
 				Ranges::Range { from: 3, to: 4 },
 				Ranges::Scalar(8),
-				Ranges::Scalar(10)
+				Ranges::Scalar(10),
+			]
+		);
+
+		let range = Range::new("1,2,3,8,10,11").unwrap();
+		assert_eq!(
+			range.get_range(),
+			vec![
+				Ranges::Range { from: 1, to: 3 },
+				Ranges::Scalar(8),
+				Ranges::Range { from: 10, to: 11 },
+			]
+		);
+
+		let range = Range::new("1,2,4,5,6,9,10,12").unwrap();
+		assert_eq!(
+			range.get_range(),
+			vec![
+				Ranges::Range { from: 1, to: 2 },
+				Ranges::Range { from: 4, to: 6 },
+				Ranges::Range { from: 9, to: 10 },
+				Ranges::Scalar(12),
 			]
 		);
 
 		let range = Range::new("10,3,4,5,1").unwrap();
 		assert_eq!(range.get_range(), vec![Ranges::Scalar(1), Ranges::Range { from: 3, to: 5 }, Ranges::Scalar(10)]);
+	}
+
+	#[test]
+	fn parsing_error_test() {
+		assert_eq!(
+			Range::new(""),
+			Err(RangeError::ParsingError(String::from("Failed to parse '': cannot parse integer from empty string")))
+		);
+
+		assert_eq!(
+			RangeError::ParsingError(String::from("Failed to parse '': cannot parse integer from empty string")).to_string(),
+			String::from("Failed to parse '': cannot parse integer from empty string")
+		);
+
+		assert_eq!(
+			Range::new("1,2,three"),
+			Err(RangeError::ParsingError(String::from("Failed to parse 'three': invalid digit found in string")))
+		);
+
+		assert_eq!(
+			Range::new("1,2,-3"),
+			Err(RangeError::ParsingError(String::from("Failed to parse '-3': invalid digit found in string")))
+		);
+
+		assert_eq!(
+			Range::new("1,2,3.5"),
+			Err(RangeError::ParsingError(String::from("Failed to parse '3.5': invalid digit found in string")))
+		);
+
+		assert_eq!(
+			Range::new("1,2,18446744073709551616"),
+			Err(RangeError::ParsingError(String::from(
+				"Failed to parse '18446744073709551616': number too large to fit in target type"
+			)))
+		);
 	}
 }

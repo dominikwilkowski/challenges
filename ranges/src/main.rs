@@ -13,7 +13,7 @@ fn main() {
 	} else {
 		let range = Range::new(&input[1]);
 		match range {
-			Ok(value) => println!("{:?}", value.get_range()),
+			Ok(value) => println!("{}", value.get_range().iter().map(ToString::to_string).collect::<Vec<_>>().join(", ")),
 			Err(error) => eprintln!("{}", error),
 		}
 	}
