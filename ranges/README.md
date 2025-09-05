@@ -11,7 +11,7 @@ Return a range for an input of numbers in a collection type
 Input: [1,3,4]
 Range to be found: 1-1 and 3-4
 
-Input: [1,3,4,5]
+Input: [1,2,3,4,5]
 Range to be found: 1-5
 
 Input: [1,2,4,5,6,9,10,12]
