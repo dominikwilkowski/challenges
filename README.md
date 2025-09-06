@@ -6,11 +6,8 @@
 
 ## Content
 
-[**Ranges**](./ranges)<br>
-Description
-
-[**TODO**](./todo)<br>
-Description
+- [**Ranges**](./ranges)
+- [**LRU**](./lru)
 
 ## License
 Copyright (c) Dominik Wilkowski.

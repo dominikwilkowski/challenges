@@ -3,5 +3,9 @@
 version = 4
 
 [[package]]
+name = "lru"
+version = "1.0.0"
+
+[[package]]
 name = "ranges"
 version = "1.0.0"
