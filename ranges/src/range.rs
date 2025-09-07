@@ -47,7 +47,8 @@ impl Range {
 	}
 
 	pub fn get_range(&self) -> Vec<Ranges> {
-		let mut result = Vec::new();
+		// in this case a slight over allocation (unless every number is scalar) is better than re-allocation as we grow
+		let mut result = Vec::with_capacity(self.numbers.len());
 
 		for num in &self.numbers {
 			if result.is_empty() {
