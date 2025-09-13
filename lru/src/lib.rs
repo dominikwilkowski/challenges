@@ -32,10 +32,18 @@ impl<K, V> LruCache<K, V> {
 
 	pub fn add(&mut self, key: K, value: V) {
 		// push into self.items
+		// get index from self.items
+		// add index and key to self.map with self.tail as prev and self.head as next
+		// add to tail
+		// if fist item, add to head
 		todo!()
 	}
 
 	pub fn get(&mut self, key: &K) -> Option<&V> {
+		// get index from self.map via key
+		// remove item from map
+		// add item back to map
+		// return value from self.items
 		todo!()
 	}
 
