@@ -9,7 +9,7 @@
 Design a LRU (Least Recently Used) in-memory cache.
 
 ```rust
-let mut cache = HashLruCache::new(3);
+let mut cache = LruCache::new(3);
 
 cache.write("a", 1);
 cache.write("b", 2);
