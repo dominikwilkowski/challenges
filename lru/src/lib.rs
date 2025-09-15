@@ -1,16 +1,21 @@
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
-struct Node<K, V> {
-	key: K,
+struct Node<V> {
+	index: usize,
 	value: V,
 	pub next: Option<usize>,
 	pub prev: Option<usize>,
 }
 
-impl<K, V> Node<K, V> {
-	fn new(key: K, value: V, next: Option<usize>, prev: Option<usize>) -> Self {
-		Self { key, value, next, prev }
+impl<V> Node<V> {
+	fn new(index: usize, value: V, next: Option<usize>, prev: Option<usize>) -> Self {
+		Self {
+			index,
+			value,
+			next,
+			prev,
+		}
 	}
 }
 
@@ -19,11 +24,13 @@ pub struct LruCache<K, V>
 where
 	K: Clone + Eq + std::hash::Hash,
 {
-	items: Vec<Option<Node<K, V>>>,
-	map: HashMap<K, usize>,
+	items: Vec<Option<Node<V>>>,
+	map: HashMap<usize, usize>,
+	lookup: HashMap<K, usize>,
 	head: Option<usize>,
 	tail: Option<usize>,
 	len: usize,
+	index: usize,
 }
 
 // items:
@@ -61,9 +68,11 @@ where
 		Self {
 			items: Vec::with_capacity(size),
 			map: HashMap::with_capacity(size),
+			lookup: HashMap::with_capacity(size),
 			head: None,
 			tail: None,
 			len: 0,
+			index: 0,
 		}
 	}
 
@@ -86,16 +95,19 @@ where
 			self.items[new_head_node].as_mut().unwrap().prev = None;
 			self.items[tail.unwrap()].as_mut().unwrap().next = Some(head_node);
 		} else {
-			self.items.push(Some(Node::new(key.clone(), value, None, tail)));
+			self.lookup.insert(key, self.index);
+			self.items.push(Some(Node::new(self.index, value, None, tail)));
 			self.tail = Some(self.items.len() - 1);
 			if self.items.len() == 1 {
 				self.head = Some(self.items.len() - 1);
 			}
-			self.map.insert(key, self.items.len() - 1);
+			self.map.insert(self.index, self.items.len() - 1);
 			self.len += 1;
 			if let Some(tail_node) = tail {
 				self.items[tail_node].as_mut().unwrap().next = Some(self.items.len() - 1);
 			}
+
+			self.index += 1;
 		}
 	}
 
