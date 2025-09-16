@@ -2,20 +2,15 @@ use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
 struct Node<V> {
-	index: usize,
+	id: usize,
 	value: V,
 	pub next: Option<usize>,
 	pub prev: Option<usize>,
 }
 
 impl<V> Node<V> {
-	fn new(index: usize, value: V, next: Option<usize>, prev: Option<usize>) -> Self {
-		Self {
-			index,
-			value,
-			next,
-			prev,
-		}
+	fn new(id: usize, value: V, next: Option<usize>, prev: Option<usize>) -> Self {
+		Self { id, value, next, prev }
 	}
 }
 
@@ -81,33 +76,64 @@ where
 		// TODO:
 		// - fix for capacity: 1
 		// - fix if keys already exist
-		// - wrap key in Arc to avoid clones
-		// - add helpers
 		if self.len == self.items.capacity() {
+			// get ID for node to be evicted
 			let head_node = self.head.unwrap();
+			let old_id = self.items[head_node].as_ref().unwrap().id;
+			let id = self.index;
+			self.index += 1;
+
+			// cache
 			let new_head_node = self.items[head_node].as_ref().unwrap().next.unwrap();
-			let key_to_remove = &self.items[head_node].as_ref().unwrap().key;
-			self.map.remove(key_to_remove);
-			self.items[head_node] = Some(Node::new(key.clone(), value, None, tail));
-			self.map.insert(key, head_node);
+			// let old_key = self.lookup search for old_id
+
+			// write new data to this node
+			self.items[head_node] = Some(Node::new(id, value, None, tail));
+
+			// point head and tail to new nodes
 			self.tail = Some(head_node);
 			self.head = Some(new_head_node);
+
+			// connect node after old head to None as it is now new head node
 			self.items[new_head_node].as_mut().unwrap().prev = None;
+
+			// connect old tail to new tail node
 			self.items[tail.unwrap()].as_mut().unwrap().next = Some(head_node);
+
+			// clean map and lookup
+			self.map.remove(&old_id);
+			// self.lookup.remove(old_key);
+
+			// add new item to map and lookup
+			self.map.insert(id, head_node);
+			self.lookup.insert(key, id);
 		} else {
-			self.lookup.insert(key, self.index);
-			self.items.push(Some(Node::new(self.index, value, None, tail)));
+			// create and add new ID to lookup table
+			let id = self.index;
+			self.index += 1;
+			self.lookup.insert(key, id);
+
+			// add new note to items via ID
+			self.items.push(Some(Node::new(id, value, None, tail)));
+
+			// point tail to new node
 			self.tail = Some(self.items.len() - 1);
+
+			// if first node, also point head to new node
 			if self.items.len() == 1 {
 				self.head = Some(self.items.len() - 1);
 			}
-			self.map.insert(self.index, self.items.len() - 1);
+
+			// record new nodes index into map
+			self.map.insert(id, self.items.len() - 1);
+
+			// increment length
 			self.len += 1;
+
+			// point previous tail node to new tail to complete the chain
 			if let Some(tail_node) = tail {
 				self.items[tail_node].as_mut().unwrap().next = Some(self.items.len() - 1);
 			}
-
-			self.index += 1;
 		}
 	}
 
@@ -141,8 +167,8 @@ mod tests {
 		let mut cache = LruCache::new(3);
 
 		cache.write(1, "one");
-		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
-		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.items, vec![Some(Node::new(0, "one", None, None))]);
+		assert_eq!(cache.map.get(&0), Some(&0));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(0));
 		assert_eq!(cache.len, 1);
@@ -151,12 +177,12 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", Some(1), None)),
-				Some(Node::new(2, "two", None, Some(0))),
+				Some(Node::new(0, "one", Some(1), None)),
+				Some(Node::new(1, "two", None, Some(0))),
 			]
 		);
-		assert_eq!(cache.map.get(&1), Some(&0));
-		assert_eq!(cache.map.get(&2), Some(&1));
+		assert_eq!(cache.map.get(&0), Some(&0));
+		assert_eq!(cache.map.get(&1), Some(&1));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(1));
 		assert_eq!(cache.len, 2);
@@ -165,14 +191,14 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", Some(1), None)),
-				Some(Node::new(2, "two", Some(2), Some(0))),
-				Some(Node::new(3, "three", None, Some(1))),
+				Some(Node::new(0, "one", Some(1), None)),
+				Some(Node::new(1, "two", Some(2), Some(0))),
+				Some(Node::new(2, "three", None, Some(1))),
 			]
 		);
-		assert_eq!(cache.map.get(&1), Some(&0));
-		assert_eq!(cache.map.get(&2), Some(&1));
-		assert_eq!(cache.map.get(&3), Some(&2));
+		assert_eq!(cache.map.get(&0), Some(&0));
+		assert_eq!(cache.map.get(&1), Some(&1));
+		assert_eq!(cache.map.get(&2), Some(&2));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(2));
 		assert_eq!(cache.len, 3);
@@ -181,16 +207,16 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(4, "four", None, Some(2))),
-				Some(Node::new(2, "two", Some(2), None)),
-				Some(Node::new(3, "three", Some(0), Some(1))),
+				Some(Node::new(3, "four", None, Some(2))),
+				Some(Node::new(1, "two", Some(2), None)),
+				Some(Node::new(2, "three", Some(0), Some(1))),
 			]
 		);
 		println!("{:?}", cache.map);
-		assert_eq!(cache.map.get(&1), None);
-		assert_eq!(cache.map.get(&2), Some(&1));
-		assert_eq!(cache.map.get(&3), Some(&2));
-		assert_eq!(cache.map.get(&4), Some(&0));
+		assert_eq!(cache.map.get(&0), None);
+		assert_eq!(cache.map.get(&1), Some(&1));
+		assert_eq!(cache.map.get(&2), Some(&2));
+		assert_eq!(cache.map.get(&3), Some(&0));
 		assert_eq!(cache.head, Some(1));
 		assert_eq!(cache.tail, Some(0));
 		assert_eq!(cache.len, 3);
