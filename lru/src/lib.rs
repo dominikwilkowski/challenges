@@ -72,7 +72,6 @@ where
 	pub fn write(&mut self, key: K, value: V) {
 		let tail = self.tail;
 		// TODO:
-		// - fix for capacity: 1
 		// - fix if keys already exist
 		// - fix unwraps
 		if self.len == self.capacity {
@@ -83,7 +82,7 @@ where
 			let key_to_remove = &self.items[head_node].as_ref().unwrap().key;
 
 			// cache node after previous head node
-			let new_head_node = self.items[head_node].as_ref().unwrap().next.unwrap();
+			let new_head_node = self.items[head_node].as_ref().unwrap().next;
 
 			// remove old mapping
 			self.map.remove(key_to_remove);
@@ -95,15 +94,17 @@ where
 			// add new mapping
 			self.map.insert(key, head_node);
 
-			// point head to new node and tail to node after old head node
-			self.tail = Some(head_node);
-			self.head = Some(new_head_node);
+			if let Some(new_head_node) = new_head_node {
+				// point head to new node and tail to node after old head node
+				self.tail = Some(head_node);
+				self.head = Some(new_head_node);
 
-			// connect node after old head to None as it is now new head node
-			self.items[new_head_node].as_mut().unwrap().prev = None;
+				// connect node after old head to None as it is now new head node
+				self.items[new_head_node].as_mut().unwrap().prev = None;
 
-			// connect old tail to new tail node
-			self.items[tail.unwrap()].as_mut().unwrap().next = Some(head_node);
+				// connect old tail to new tail node
+				self.items[tail.unwrap()].as_mut().unwrap().next = Some(head_node);
+			}
 		} else {
 			// add new node to items with key
 			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
@@ -149,6 +150,10 @@ where
 	pub fn len(&self) -> usize {
 		self.len
 	}
+
+	pub fn is_empty(&self) -> bool {
+		self.len == 0
+	}
 }
 
 #[cfg(test)]
@@ -156,7 +161,7 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn write_item_test() {
+	fn write_items_test() {
 		let mut cache = LruCache::new(3);
 
 		cache.write(1, "one");
@@ -205,7 +210,6 @@ mod tests {
 				Some(Node::new(3, "three", Some(0), Some(1))),
 			]
 		);
-		println!("{:?}", cache.map);
 		assert_eq!(cache.map.get(&1), None);
 		assert_eq!(cache.map.get(&2), Some(&1));
 		assert_eq!(cache.map.get(&3), Some(&2));
@@ -213,6 +217,35 @@ mod tests {
 		assert_eq!(cache.head, Some(1));
 		assert_eq!(cache.tail, Some(0));
 		assert_eq!(cache.len, 3);
+	}
+
+	#[test]
+	fn write_single_capacity_test() {
+		let mut cache = LruCache::new(1);
+
+		cache.write(1, "one");
+		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(0));
+		assert_eq!(cache.len, 1);
+
+		cache.write(2, "two");
+		assert_eq!(cache.items, vec![Some(Node::new(2, "two", None, Some(0))),]);
+		assert_eq!(cache.map.get(&1), None);
+		assert_eq!(cache.map.get(&2), Some(&0));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(0));
+		assert_eq!(cache.len, 1);
+
+		cache.write(3, "three");
+		assert_eq!(cache.items, vec![Some(Node::new(3, "three", None, Some(0))),]);
+		assert_eq!(cache.map.get(&1), None);
+		assert_eq!(cache.map.get(&2), None);
+		assert_eq!(cache.map.get(&3), Some(&0));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(0));
+		assert_eq!(cache.len, 1);
 	}
 
 	// #[test]
