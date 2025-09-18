@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
-struct Node<V> {
-	id: usize,
+struct Node<K, V> {
+	key: K,
 	value: V,
 	pub next: Option<usize>,
 	pub prev: Option<usize>,
 }
 
-impl<V> Node<V> {
-	fn new(id: usize, value: V, next: Option<usize>, prev: Option<usize>) -> Self {
-		Self { id, value, next, prev }
+impl<K, V> Node<K, V> {
+	fn new(key: K, value: V, next: Option<usize>, prev: Option<usize>) -> Self {
+		Self { key, value, next, prev }
 	}
 }
 
@@ -19,13 +19,12 @@ pub struct LruCache<K, V>
 where
 	K: Clone + Eq + std::hash::Hash,
 {
-	items: Vec<Option<Node<V>>>,
-	map: HashMap<usize, usize>,
-	lookup: HashMap<K, usize>,
+	items: Vec<Option<Node<K, V>>>,
+	map: HashMap<K, usize>,
 	head: Option<usize>,
 	tail: Option<usize>,
 	len: usize,
-	index: usize,
+	capacity: usize,
 }
 
 // items:
@@ -63,11 +62,10 @@ where
 		Self {
 			items: Vec::with_capacity(size),
 			map: HashMap::with_capacity(size),
-			lookup: HashMap::with_capacity(size),
 			head: None,
 			tail: None,
 			len: 0,
-			index: 0,
+			capacity: size,
 		}
 	}
 
@@ -76,21 +74,28 @@ where
 		// TODO:
 		// - fix for capacity: 1
 		// - fix if keys already exist
-		if self.len == self.items.capacity() {
-			// get ID for node to be evicted
+		// - fix unwraps
+		if self.len == self.capacity {
+			// get previous head node
 			let head_node = self.head.unwrap();
-			let old_id = self.items[head_node].as_ref().unwrap().id;
-			let id = self.index;
-			self.index += 1;
 
-			// cache
+			// cache key of previous head node
+			let key_to_remove = &self.items[head_node].as_ref().unwrap().key;
+
+			// cache node after previous head node
 			let new_head_node = self.items[head_node].as_ref().unwrap().next.unwrap();
-			// let old_key = self.lookup search for old_id
 
-			// write new data to this node
-			self.items[head_node] = Some(Node::new(id, value, None, tail));
+			// remove old mapping
+			self.map.remove(key_to_remove);
 
-			// point head and tail to new nodes
+			// overwrite new node to where the last head node was
+			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
+			self.items[head_node] = Some(Node::new(key.clone(), value, None, tail));
+
+			// add new mapping
+			self.map.insert(key, head_node);
+
+			// point head to new node and tail to node after old head node
 			self.tail = Some(head_node);
 			self.head = Some(new_head_node);
 
@@ -99,22 +104,10 @@ where
 
 			// connect old tail to new tail node
 			self.items[tail.unwrap()].as_mut().unwrap().next = Some(head_node);
-
-			// clean map and lookup
-			self.map.remove(&old_id);
-			// self.lookup.remove(old_key);
-
-			// add new item to map and lookup
-			self.map.insert(id, head_node);
-			self.lookup.insert(key, id);
 		} else {
-			// create and add new ID to lookup table
-			let id = self.index;
-			self.index += 1;
-			self.lookup.insert(key, id);
-
-			// add new note to items via ID
-			self.items.push(Some(Node::new(id, value, None, tail)));
+			// add new node to items with key
+			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
+			self.items.push(Some(Node::new(key.clone(), value, None, tail)));
 
 			// point tail to new node
 			self.tail = Some(self.items.len() - 1);
@@ -125,7 +118,7 @@ where
 			}
 
 			// record new nodes index into map
-			self.map.insert(id, self.items.len() - 1);
+			self.map.insert(key, self.items.len() - 1);
 
 			// increment length
 			self.len += 1;
@@ -167,8 +160,8 @@ mod tests {
 		let mut cache = LruCache::new(3);
 
 		cache.write(1, "one");
-		assert_eq!(cache.items, vec![Some(Node::new(0, "one", None, None))]);
-		assert_eq!(cache.map.get(&0), Some(&0));
+		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(cache.map.get(&1), Some(&0));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(0));
 		assert_eq!(cache.len, 1);
@@ -177,12 +170,12 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(0, "one", Some(1), None)),
-				Some(Node::new(1, "two", None, Some(0))),
+				Some(Node::new(1, "one", Some(1), None)),
+				Some(Node::new(2, "two", None, Some(0))),
 			]
 		);
-		assert_eq!(cache.map.get(&0), Some(&0));
-		assert_eq!(cache.map.get(&1), Some(&1));
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.map.get(&2), Some(&1));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(1));
 		assert_eq!(cache.len, 2);
@@ -191,14 +184,14 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(0, "one", Some(1), None)),
-				Some(Node::new(1, "two", Some(2), Some(0))),
-				Some(Node::new(2, "three", None, Some(1))),
+				Some(Node::new(1, "one", Some(1), None)),
+				Some(Node::new(2, "two", Some(2), Some(0))),
+				Some(Node::new(3, "three", None, Some(1))),
 			]
 		);
-		assert_eq!(cache.map.get(&0), Some(&0));
-		assert_eq!(cache.map.get(&1), Some(&1));
-		assert_eq!(cache.map.get(&2), Some(&2));
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.map.get(&2), Some(&1));
+		assert_eq!(cache.map.get(&3), Some(&2));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(2));
 		assert_eq!(cache.len, 3);
@@ -207,16 +200,16 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(3, "four", None, Some(2))),
-				Some(Node::new(1, "two", Some(2), None)),
-				Some(Node::new(2, "three", Some(0), Some(1))),
+				Some(Node::new(4, "four", None, Some(2))),
+				Some(Node::new(2, "two", Some(2), None)),
+				Some(Node::new(3, "three", Some(0), Some(1))),
 			]
 		);
 		println!("{:?}", cache.map);
-		assert_eq!(cache.map.get(&0), None);
-		assert_eq!(cache.map.get(&1), Some(&1));
-		assert_eq!(cache.map.get(&2), Some(&2));
-		assert_eq!(cache.map.get(&3), Some(&0));
+		assert_eq!(cache.map.get(&1), None);
+		assert_eq!(cache.map.get(&2), Some(&1));
+		assert_eq!(cache.map.get(&3), Some(&2));
+		assert_eq!(cache.map.get(&4), Some(&0));
 		assert_eq!(cache.head, Some(1));
 		assert_eq!(cache.tail, Some(0));
 		assert_eq!(cache.len, 3);
