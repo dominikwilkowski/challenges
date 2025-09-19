@@ -3,14 +3,14 @@ use std::collections::HashMap;
 #[derive(Debug, PartialEq)]
 struct Node<K, V> {
 	key: K,
-	value: V,
-	pub next: Option<usize>,
+	pub value: V,
 	pub prev: Option<usize>,
+	pub next: Option<usize>,
 }
 
 impl<K, V> Node<K, V> {
-	fn new(key: K, value: V, next: Option<usize>, prev: Option<usize>) -> Self {
-		Self { key, value, next, prev }
+	fn new(key: K, value: V, prev: Option<usize>, next: Option<usize>) -> Self {
+		Self { key, value, prev, next }
 	}
 }
 
@@ -72,9 +72,49 @@ where
 	pub fn write(&mut self, key: K, value: V) {
 		let tail = self.tail;
 		// TODO:
-		// - fix if keys already exist
 		// - fix unwraps
-		if self.len == self.capacity {
+		// - add helper functions
+
+		// key already exists
+		if let Some(new_tail) = self.map.get(&key) {
+			// update value
+			self.items[*new_tail].as_mut().unwrap().value = value;
+
+			// this will catch capacity 1 and if the item is already in MRU position
+			if self.tail != Some(*new_tail) {
+				// get the item after the new tail
+				let last_next = self.items[*new_tail].as_ref().unwrap().next;
+
+				// make prev item of this node point to next item
+				if let Some(last_prev) = self.items[*new_tail].as_ref().unwrap().prev {
+					// node was inside the chain
+					// so last item that came after our new tail node now points to the previous prev item
+					self.items[last_next.unwrap()].as_mut().unwrap().prev = Some(last_prev);
+
+					// and the item that came before our new tail now points to the previous next item
+					self.items[last_prev].as_mut().unwrap().next = last_next;
+				} else {
+					// new tail node was at the head
+					// so last item that came after our new tail node is now head and prev is None
+					self.items[last_next.unwrap()].as_mut().unwrap().prev = None;
+
+					// the item after our new tail node will now be head
+					self.head = last_next;
+				}
+
+				// point tail prev to old tail
+				self.items[*new_tail].as_mut().unwrap().prev = self.tail;
+
+				// point old tail node to this node
+				self.items[self.tail.unwrap()].as_mut().unwrap().next = Some(*new_tail);
+
+				// point tail to this node
+				self.tail = Some(*new_tail);
+
+				// make new tail next node none
+				self.items[*new_tail].as_mut().unwrap().next = None;
+			}
+		} else if self.len == self.capacity {
 			// get previous head node
 			let head_node = self.head.unwrap();
 
@@ -89,7 +129,7 @@ where
 
 			// overwrite new node to where the last head node was
 			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
-			self.items[head_node] = Some(Node::new(key.clone(), value, None, tail));
+			self.items[head_node] = Some(Node::new(key.clone(), value, tail, None));
 
 			// add new mapping
 			self.map.insert(key, head_node);
@@ -108,7 +148,7 @@ where
 		} else {
 			// add new node to items with key
 			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
-			self.items.push(Some(Node::new(key.clone(), value, None, tail)));
+			self.items.push(Some(Node::new(key.clone(), value, tail, None)));
 
 			// point tail to new node
 			self.tail = Some(self.items.len() - 1);
@@ -175,8 +215,8 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", Some(1), None)),
-				Some(Node::new(2, "two", None, Some(0))),
+				Some(Node::new(1, "one", None, Some(1))),
+				Some(Node::new(2, "two", Some(0), None)),
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -189,9 +229,9 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", Some(1), None)),
-				Some(Node::new(2, "two", Some(2), Some(0))),
-				Some(Node::new(3, "three", None, Some(1))),
+				Some(Node::new(1, "one", None, Some(1))),
+				Some(Node::new(2, "two", Some(0), Some(2))),
+				Some(Node::new(3, "three", Some(1), None)),
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -205,9 +245,9 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(4, "four", None, Some(2))),
-				Some(Node::new(2, "two", Some(2), None)),
-				Some(Node::new(3, "three", Some(0), Some(1))),
+				Some(Node::new(4, "four", Some(2), None)),
+				Some(Node::new(2, "two", None, Some(2))),
+				Some(Node::new(3, "three", Some(1), Some(0))),
 			]
 		);
 		assert_eq!(cache.map.get(&1), None);
@@ -231,7 +271,7 @@ mod tests {
 		assert_eq!(cache.len, 1);
 
 		cache.write(2, "two");
-		assert_eq!(cache.items, vec![Some(Node::new(2, "two", None, Some(0))),]);
+		assert_eq!(cache.items, vec![Some(Node::new(2, "two", Some(0), None)),]);
 		assert_eq!(cache.map.get(&1), None);
 		assert_eq!(cache.map.get(&2), Some(&0));
 		assert_eq!(cache.head, Some(0));
@@ -239,13 +279,111 @@ mod tests {
 		assert_eq!(cache.len, 1);
 
 		cache.write(3, "three");
-		assert_eq!(cache.items, vec![Some(Node::new(3, "three", None, Some(0))),]);
+		assert_eq!(cache.items, vec![Some(Node::new(3, "three", Some(0), None)),]);
 		assert_eq!(cache.map.get(&1), None);
 		assert_eq!(cache.map.get(&2), None);
 		assert_eq!(cache.map.get(&3), Some(&0));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(0));
 		assert_eq!(cache.len, 1);
+	}
+
+	#[test]
+	fn write_existing_item_filling_test() {
+		let mut cache = LruCache::new(3);
+
+		cache.write(1, "one");
+		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(0));
+		assert_eq!(cache.len, 1);
+
+		cache.write(2, "two");
+		assert_eq!(
+			cache.items,
+			vec![
+				Some(Node::new(1, "one", None, Some(1))),
+				Some(Node::new(2, "two", Some(0), None)),
+			]
+		);
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.map.get(&2), Some(&1));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(1));
+		assert_eq!(cache.len, 2);
+
+		cache.write(1, "three");
+		assert_eq!(
+			cache.items,
+			vec![
+				Some(Node::new(1, "three", Some(1), None)),
+				Some(Node::new(2, "two", None, Some(0))),
+			]
+		);
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.map.get(&2), Some(&1));
+		assert_eq!(cache.head, Some(1));
+		assert_eq!(cache.tail, Some(0));
+		assert_eq!(cache.len, 2);
+	}
+
+	#[test]
+	fn write_existing_item_full_test() {
+		let mut cache = LruCache::new(3);
+
+		cache.write(1, "one");
+		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(0));
+		assert_eq!(cache.len, 1);
+
+		cache.write(2, "two");
+		assert_eq!(
+			cache.items,
+			vec![
+				Some(Node::new(1, "one", None, Some(1))),
+				Some(Node::new(2, "two", Some(0), None)),
+			]
+		);
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.map.get(&2), Some(&1));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(1));
+		assert_eq!(cache.len, 2);
+
+		cache.write(3, "three");
+		assert_eq!(
+			cache.items,
+			vec![
+				Some(Node::new(1, "one", None, Some(1))),
+				Some(Node::new(2, "two", Some(0), Some(2))),
+				Some(Node::new(3, "three", Some(1), None)),
+			]
+		);
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.map.get(&2), Some(&1));
+		assert_eq!(cache.map.get(&3), Some(&2));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(2));
+		assert_eq!(cache.len, 3);
+
+		cache.write(2, "four");
+		assert_eq!(
+			cache.items,
+			vec![
+				Some(Node::new(1, "one", None, Some(2))),
+				Some(Node::new(2, "four", Some(2), None)),
+				Some(Node::new(3, "three", Some(0), Some(1))),
+			]
+		);
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.map.get(&2), Some(&1));
+		assert_eq!(cache.map.get(&3), Some(&2));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(1));
+		assert_eq!(cache.len, 3);
 	}
 
 	// #[test]
