@@ -27,29 +27,6 @@ where
 	capacity: usize,
 }
 
-// items:
-// Write A
-// map: A:0
-// items: A{prev:None, next:None}
-// Write B
-// map: A:0 B:1
-// items: A{prev:None, next:1} B{prev:0, next:None}
-// Write C
-// map: A:0 B:1 C:2
-// items: A{prev:None, next:1} B{prev:0, next:2} C{prev:1, next:None}
-// ...
-// items: A{prev:None, next:1} B{prev:0, next:2} C{prev:1, next:3} D{prev:2, next:None}
-// A B C D
-// map: A:0, B:1, C:2, D:3
-// Write E
-// items: E{prev:3, next:None} B{prev:None, next:2} C{prev:1, next:3} D{prev:2, next:0}
-// B C D E
-// map: B:1, C:2, D:3, E:0
-// Read B
-// items: E{prev:3, next:1} B{prev:0, next:None} C{prev:None, next:3} D{prev:2, next:0}
-// C D E B
-// map: B:1, C:2, D:3, E:0
-
 impl<K, V> LruCache<K, V>
 where
 	K: Clone + Eq + std::hash::Hash,
@@ -69,51 +46,77 @@ where
 		}
 	}
 
+	fn move_to_tail(&mut self, index: usize) {
+		// moving [index] to tail -->
+		// head .. - [index_prev] - [index] - [index_next] - .. tail
+		//                      ------^
+		if self.tail == Some(index) {
+			// [index] already at tail
+			// .. - [index_prev] - [index]
+			return;
+		}
+
+		let index_node = self.items[index].as_ref().expect("BUG: node index not found");
+
+		// get the item after the item to be moved [index] (and we know there is an item because we are not at the tail)
+		// .. - [index_prev] - [index] - [index_next] - ..
+		//                               ------^
+		let index_next = index_node.next.expect("BUG: item not at tail did not have a next link");
+
+		// make prev item of this node point to next item
+		// .. - [index_prev] -- [index_next] - ..
+		if let Some(index_prev) = index_node.prev {
+			// node was inside the chain
+			// .. - [index_prev] - [index] - [index_next] - ..
+
+			// so last item that came after our new tail node now points to the previous prev item
+			// .. - [index_prev] <- [index_next] - ..
+			self.items[index_next].as_mut().expect("BUG: node index_next not found").prev = Some(index_prev);
+
+			// and the item that came before our new tail now points to the previous next item
+			// .. - [index_prev] -> [index_next] - ..
+			self.items[index_prev].as_mut().expect("BUG: node index_prev not found").next = Some(index_next);
+		} else {
+			// new tail node was at the head
+			// [index] - [index_next] - ..
+
+			// so last item that came after our new tail node is now head and prev is None
+			self.items[index_next].as_mut().expect("BUG: node index_next not found").prev = None;
+
+			// the item after our new tail node will now be head
+			self.head = Some(index_next);
+		}
+
+		// point index prev to old tail
+		// head .. - [index_prev] - [index_next] - [old_tail] <- [index]
+		self.items[index].as_mut().expect("BUG: node index not found").prev = self.tail;
+
+		// point old tail node to index
+		// head .. - [index_prev] - [index_next] - [old_tail] -> [index]
+		// Note: the unwrap is fine due to the early return check at the start of this function
+		self.items[self.tail.unwrap()].as_mut().expect("BUG: tail node not found").next = Some(index);
+
+		// point tail to this node
+		self.tail = Some(index);
+
+		// make new tail next node none
+		// head .. - [index_prev] - [index_next] - [index] -> None
+		self.items[index].as_mut().expect("BUG: node index not found").next = None;
+	}
+
 	pub fn write(&mut self, key: K, value: V) {
 		let tail = self.tail;
 		// TODO:
 		// - fix unwraps
 		// - add helper functions
 
-		// key already exists
+		// UPDATE PATH
 		if let Some(new_tail) = self.map.get(&key) {
 			// update value
 			self.items[*new_tail].as_mut().unwrap().value = value;
 
-			// this will catch capacity 1 and if the item is already in MRU position
-			if self.tail != Some(*new_tail) {
-				// get the item after the new tail
-				let last_next = self.items[*new_tail].as_ref().unwrap().next;
-
-				// make prev item of this node point to next item
-				if let Some(last_prev) = self.items[*new_tail].as_ref().unwrap().prev {
-					// node was inside the chain
-					// so last item that came after our new tail node now points to the previous prev item
-					self.items[last_next.unwrap()].as_mut().unwrap().prev = Some(last_prev);
-
-					// and the item that came before our new tail now points to the previous next item
-					self.items[last_prev].as_mut().unwrap().next = last_next;
-				} else {
-					// new tail node was at the head
-					// so last item that came after our new tail node is now head and prev is None
-					self.items[last_next.unwrap()].as_mut().unwrap().prev = None;
-
-					// the item after our new tail node will now be head
-					self.head = last_next;
-				}
-
-				// point tail prev to old tail
-				self.items[*new_tail].as_mut().unwrap().prev = self.tail;
-
-				// point old tail node to this node
-				self.items[self.tail.unwrap()].as_mut().unwrap().next = Some(*new_tail);
-
-				// point tail to this node
-				self.tail = Some(*new_tail);
-
-				// make new tail next node none
-				self.items[*new_tail].as_mut().unwrap().next = None;
-			}
+			self.move_to_tail(*new_tail);
+		// EVICTION PATH
 		} else if self.len == self.capacity {
 			// get previous head node
 			let head_node = self.head.unwrap();
@@ -145,6 +148,7 @@ where
 				// connect old tail to new tail node
 				self.items[tail.unwrap()].as_mut().unwrap().next = Some(head_node);
 			}
+		// INSERTION PATH
 		} else {
 			// add new node to items with key
 			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
