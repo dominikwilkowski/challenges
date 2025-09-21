@@ -132,7 +132,7 @@ where
 
 			// overwrite new node to where the last head node was
 			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
-			self.items[head_node] = Some(Node::new(key.clone(), value, tail, None));
+			self.items[head_node] = Some(Node::new(key.clone(), value, if self.capacity == 1 { None } else { tail }, None));
 
 			// add new mapping
 			self.map.insert(key, head_node);
@@ -275,7 +275,7 @@ mod tests {
 		assert_eq!(cache.len, 1);
 
 		cache.write(2, "two");
-		assert_eq!(cache.items, vec![Some(Node::new(2, "two", Some(0), None)),]);
+		assert_eq!(cache.items, vec![Some(Node::new(2, "two", None, None)),]);
 		assert_eq!(cache.map.get(&1), None);
 		assert_eq!(cache.map.get(&2), Some(&0));
 		assert_eq!(cache.head, Some(0));
@@ -283,7 +283,7 @@ mod tests {
 		assert_eq!(cache.len, 1);
 
 		cache.write(3, "three");
-		assert_eq!(cache.items, vec![Some(Node::new(3, "three", Some(0), None)),]);
+		assert_eq!(cache.items, vec![Some(Node::new(3, "three", None, None)),]);
 		assert_eq!(cache.map.get(&1), None);
 		assert_eq!(cache.map.get(&2), None);
 		assert_eq!(cache.map.get(&3), Some(&0));
@@ -388,6 +388,35 @@ mod tests {
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(1));
 		assert_eq!(cache.len, 3);
+	}
+
+	#[test]
+	fn write_existing_item_capacity_one_test() {
+		let mut cache = LruCache::new(1);
+
+		cache.write(1, "one");
+		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(cache.map.get(&1), Some(&0));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(0));
+		assert_eq!(cache.len, 1);
+
+		cache.write(2, "two");
+		assert_eq!(cache.items, vec![Some(Node::new(2, "two", None, None))]);
+		assert_eq!(cache.map.get(&1), None);
+		assert_eq!(cache.map.get(&2), Some(&0));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(0));
+		assert_eq!(cache.len, 1);
+
+		cache.write(3, "three");
+		assert_eq!(cache.items, vec![Some(Node::new(3, "three", None, None))]);
+		assert_eq!(cache.map.get(&1), None);
+		assert_eq!(cache.map.get(&2), None);
+		assert_eq!(cache.map.get(&3), Some(&0));
+		assert_eq!(cache.head, Some(0));
+		assert_eq!(cache.tail, Some(0));
+		assert_eq!(cache.len, 1);
 	}
 
 	// #[test]
