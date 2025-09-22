@@ -61,9 +61,9 @@ where
 		// get the item after the item to be moved [index] (and we know there is an item because we are not at the tail)
 		// .. - [index_prev] - [index] - [index_next] - ..
 		//                               ------^
-		let index_next = index_node.next.expect("BUG: item not at tail did not have a next link");
+		let index_next = index_node.next.expect("BUG: non-tail-item did not have a next link");
 
-		// make prev item of this node point to next item
+		// detach index from chain
 		// .. - [index_prev] -- [index_next] - ..
 		if let Some(index_prev) = index_node.prev {
 			// node was inside the chain
@@ -87,21 +87,24 @@ where
 			self.head = Some(index_next);
 		}
 
-		// point index prev to old tail
-		// head .. - [index_prev] - [index_next] - [old_tail] <- [index]
-		self.items[index].as_mut().expect("BUG: node index not found").prev = self.tail;
+		{
+			let index_node = self.items[index].as_mut().expect("BUG: node index not found");
 
-		// point old tail node to index
+			// point index prev to old tail
+			// head .. - [index_prev] - [index_next] - [old_tail] <- [index]
+			index_node.prev = self.tail;
+
+			// make new tail next node none
+			// head .. - [index_prev] - [index_next] - [index] -> None
+			index_node.next = None;
+		}
+
 		// head .. - [index_prev] - [index_next] - [old_tail] -> [index]
 		// Note: the unwrap is fine due to the early return check at the start of this function
 		self.items[self.tail.unwrap()].as_mut().expect("BUG: tail node not found").next = Some(index);
 
 		// point tail to this node
 		self.tail = Some(index);
-
-		// make new tail next node none
-		// head .. - [index_prev] - [index_next] - [index] -> None
-		self.items[index].as_mut().expect("BUG: node index not found").next = None;
 	}
 
 	pub fn write(&mut self, key: K, value: V) {
