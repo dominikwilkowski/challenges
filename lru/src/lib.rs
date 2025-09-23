@@ -110,46 +110,47 @@ where
 	pub fn write(&mut self, key: K, value: V) {
 		let tail = self.tail;
 		// TODO:
-		// - fix unwraps
 		// - add helper functions
 
 		// UPDATE PATH
 		if let Some(new_tail) = self.map.get(&key) {
 			// update value
-			self.items[*new_tail].as_mut().unwrap().value = value;
+			self.items[*new_tail].as_mut().expect("BUG: node from map not found").value = value;
 
 			self.move_to_tail(*new_tail);
 		// EVICTION PATH
 		} else if self.len == self.capacity {
 			// get previous head node
-			let head_node = self.head.unwrap();
+			let head_index = self.head.expect("BUG: no head node was set");
+			let head_node = self.items[head_index].as_ref().expect("BUG: head node not found");
 
 			// cache key of previous head node
-			let key_to_remove = &self.items[head_node].as_ref().unwrap().key;
+			let key_to_remove = &head_node.key;
 
 			// cache node after previous head node
-			let new_head_node = self.items[head_node].as_ref().unwrap().next;
+			let new_head_node = head_node.next;
 
 			// remove old mapping
 			self.map.remove(key_to_remove);
 
 			// overwrite new node to where the last head node was
 			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
-			self.items[head_node] = Some(Node::new(key.clone(), value, if self.capacity == 1 { None } else { tail }, None));
+			self.items[head_index] = Some(Node::new(key.clone(), value, if self.capacity == 1 { None } else { tail }, None));
 
 			// add new mapping
-			self.map.insert(key, head_node);
+			self.map.insert(key, head_index);
 
 			if let Some(new_head_node) = new_head_node {
 				// point head to new node and tail to node after old head node
-				self.tail = Some(head_node);
+				self.tail = Some(head_index);
 				self.head = Some(new_head_node);
 
 				// connect node after old head to None as it is now new head node
-				self.items[new_head_node].as_mut().unwrap().prev = None;
+				self.items[new_head_node].as_mut().expect("BUG: new head node not found").prev = None;
 
 				// connect old tail to new tail node
-				self.items[tail.unwrap()].as_mut().unwrap().next = Some(head_node);
+				self.items[tail.expect("BUG: tail node not set")].as_mut().expect("BUG: tail node not found").next =
+					Some(head_index);
 			}
 		// INSERTION PATH
 		} else {
@@ -173,7 +174,7 @@ where
 
 			// point previous tail node to new tail to complete the chain
 			if let Some(tail_node) = tail {
-				self.items[tail_node].as_mut().unwrap().next = Some(self.items.len() - 1);
+				self.items[tail_node].as_mut().expect("BUG: tail node not found").next = Some(self.items.len() - 1);
 			}
 		}
 	}
