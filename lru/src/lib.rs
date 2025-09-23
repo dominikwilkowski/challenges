@@ -8,12 +8,6 @@ struct Node<K, V> {
 	pub next: Option<usize>,
 }
 
-impl<K, V> Node<K, V> {
-	fn new(key: K, value: V, prev: Option<usize>, next: Option<usize>) -> Self {
-		Self { key, value, prev, next }
-	}
-}
-
 #[derive(Debug)]
 pub struct LruCache<K, V>
 where
@@ -135,7 +129,12 @@ where
 
 			// overwrite new node to where the last head node was
 			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
-			self.items[head_index] = Some(Node::new(key.clone(), value, if self.capacity == 1 { None } else { tail }, None));
+			self.items[head_index] = Some(Node {
+				key: key.clone(),
+				value,
+				prev: if self.capacity == 1 { None } else { tail },
+				next: None,
+			});
 
 			// add new mapping
 			self.map.insert(key, head_index);
@@ -156,7 +155,12 @@ where
 		} else {
 			// add new node to items with key
 			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
-			self.items.push(Some(Node::new(key.clone(), value, tail, None)));
+			self.items.push(Some(Node {
+				key: key.clone(),
+				value,
+				prev: tail,
+				next: None,
+			}));
 
 			// point tail to new node
 			self.tail = Some(self.items.len() - 1);
@@ -180,11 +184,13 @@ where
 	}
 
 	pub fn read(&mut self, key: &K) -> Option<&V> {
-		// get index from self.map via key
-		// remove item from map
-		// add item back to map
-		// return value from self.items
-		todo!()
+		let index = match self.map.get(key).copied() {
+			Some(idx) => idx,
+			None => return None,
+		};
+
+		self.move_to_tail(index);
+		Some(&self.items[index].as_ref().expect("BUG: node not found").value)
 	}
 
 	pub fn delete(&mut self, key: &K) -> Result<(), ()> {
@@ -213,7 +219,15 @@ mod tests {
 		let mut cache = LruCache::new(3);
 
 		cache.write(1, "one");
-		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(
+			cache.items,
+			vec![Some(Node {
+				key: 1,
+				value: "one",
+				prev: None,
+				next: None
+			})]
+		);
 		assert_eq!(cache.map.get(&1), Some(&0));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(0));
@@ -223,8 +237,18 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", None, Some(1))),
-				Some(Node::new(2, "two", Some(0), None)),
+				Some(Node {
+					key: 1,
+					value: "one",
+					prev: None,
+					next: Some(1)
+				}),
+				Some(Node {
+					key: 2,
+					value: "two",
+					prev: Some(0),
+					next: None
+				}),
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -237,9 +261,24 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", None, Some(1))),
-				Some(Node::new(2, "two", Some(0), Some(2))),
-				Some(Node::new(3, "three", Some(1), None)),
+				Some(Node {
+					key: 1,
+					value: "one",
+					prev: None,
+					next: Some(1)
+				}),
+				Some(Node {
+					key: 2,
+					value: "two",
+					prev: Some(0),
+					next: Some(2)
+				}),
+				Some(Node {
+					key: 3,
+					value: "three",
+					prev: Some(1),
+					next: None
+				}),
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -253,9 +292,24 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(4, "four", Some(2), None)),
-				Some(Node::new(2, "two", None, Some(2))),
-				Some(Node::new(3, "three", Some(1), Some(0))),
+				Some(Node {
+					key: 4,
+					value: "four",
+					prev: Some(2),
+					next: None
+				}),
+				Some(Node {
+					key: 2,
+					value: "two",
+					prev: None,
+					next: Some(2)
+				}),
+				Some(Node {
+					key: 3,
+					value: "three",
+					prev: Some(1),
+					next: Some(0)
+				}),
 			]
 		);
 		assert_eq!(cache.map.get(&1), None);
@@ -272,14 +326,30 @@ mod tests {
 		let mut cache = LruCache::new(1);
 
 		cache.write(1, "one");
-		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(
+			cache.items,
+			vec![Some(Node {
+				key: 1,
+				value: "one",
+				next: None,
+				prev: None
+			})]
+		);
 		assert_eq!(cache.map.get(&1), Some(&0));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(0));
 		assert_eq!(cache.len, 1);
 
 		cache.write(2, "two");
-		assert_eq!(cache.items, vec![Some(Node::new(2, "two", None, None)),]);
+		assert_eq!(
+			cache.items,
+			vec![Some(Node {
+				key: 2,
+				value: "two",
+				next: None,
+				prev: None
+			}),]
+		);
 		assert_eq!(cache.map.get(&1), None);
 		assert_eq!(cache.map.get(&2), Some(&0));
 		assert_eq!(cache.head, Some(0));
@@ -287,7 +357,15 @@ mod tests {
 		assert_eq!(cache.len, 1);
 
 		cache.write(3, "three");
-		assert_eq!(cache.items, vec![Some(Node::new(3, "three", None, None)),]);
+		assert_eq!(
+			cache.items,
+			vec![Some(Node {
+				key: 3,
+				value: "three",
+				next: None,
+				prev: None
+			}),]
+		);
 		assert_eq!(cache.map.get(&1), None);
 		assert_eq!(cache.map.get(&2), None);
 		assert_eq!(cache.map.get(&3), Some(&0));
@@ -301,7 +379,15 @@ mod tests {
 		let mut cache = LruCache::new(3);
 
 		cache.write(1, "one");
-		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(
+			cache.items,
+			vec![Some(Node {
+				key: 1,
+				value: "one",
+				prev: None,
+				next: None
+			})]
+		);
 		assert_eq!(cache.map.get(&1), Some(&0));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(0));
@@ -311,8 +397,18 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", None, Some(1))),
-				Some(Node::new(2, "two", Some(0), None)),
+				Some(Node {
+					key: 1,
+					value: "one",
+					prev: None,
+					next: Some(1)
+				}),
+				Some(Node {
+					key: 2,
+					value: "two",
+					prev: Some(0),
+					next: None
+				}),
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -325,8 +421,18 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "three", Some(1), None)),
-				Some(Node::new(2, "two", None, Some(0))),
+				Some(Node {
+					key: 1,
+					value: "three",
+					prev: Some(1),
+					next: None
+				}),
+				Some(Node {
+					key: 2,
+					value: "two",
+					prev: None,
+					next: Some(0)
+				}),
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -341,7 +447,15 @@ mod tests {
 		let mut cache = LruCache::new(3);
 
 		cache.write(1, "one");
-		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(
+			cache.items,
+			vec![Some(Node {
+				key: 1,
+				value: "one",
+				prev: None,
+				next: None
+			})]
+		);
 		assert_eq!(cache.map.get(&1), Some(&0));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(0));
@@ -351,8 +465,18 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", None, Some(1))),
-				Some(Node::new(2, "two", Some(0), None)),
+				Some(Node {
+					key: 1,
+					value: "one",
+					prev: None,
+					next: Some(1)
+				}),
+				Some(Node {
+					key: 2,
+					value: "two",
+					prev: Some(0),
+					next: None
+				}),
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -365,9 +489,24 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", None, Some(1))),
-				Some(Node::new(2, "two", Some(0), Some(2))),
-				Some(Node::new(3, "three", Some(1), None)),
+				Some(Node {
+					key: 1,
+					value: "one",
+					prev: None,
+					next: Some(1)
+				}),
+				Some(Node {
+					key: 2,
+					value: "two",
+					prev: Some(0),
+					next: Some(2)
+				}),
+				Some(Node {
+					key: 3,
+					value: "three",
+					prev: Some(1),
+					next: None
+				}),
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -381,9 +520,24 @@ mod tests {
 		assert_eq!(
 			cache.items,
 			vec![
-				Some(Node::new(1, "one", None, Some(2))),
-				Some(Node::new(2, "four", Some(2), None)),
-				Some(Node::new(3, "three", Some(0), Some(1))),
+				Some(Node {
+					key: 1,
+					value: "one",
+					prev: None,
+					next: Some(2)
+				}),
+				Some(Node {
+					key: 2,
+					value: "four",
+					prev: Some(2),
+					next: None
+				}),
+				Some(Node {
+					key: 3,
+					value: "three",
+					prev: Some(0),
+					next: Some(1)
+				}),
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -399,14 +553,30 @@ mod tests {
 		let mut cache = LruCache::new(1);
 
 		cache.write(1, "one");
-		assert_eq!(cache.items, vec![Some(Node::new(1, "one", None, None))]);
+		assert_eq!(
+			cache.items,
+			vec![Some(Node {
+				key: 1,
+				value: "one",
+				prev: None,
+				next: None
+			})]
+		);
 		assert_eq!(cache.map.get(&1), Some(&0));
 		assert_eq!(cache.head, Some(0));
 		assert_eq!(cache.tail, Some(0));
 		assert_eq!(cache.len, 1);
 
 		cache.write(2, "two");
-		assert_eq!(cache.items, vec![Some(Node::new(2, "two", None, None))]);
+		assert_eq!(
+			cache.items,
+			vec![Some(Node {
+				key: 2,
+				value: "two",
+				prev: None,
+				next: None
+			})]
+		);
 		assert_eq!(cache.map.get(&1), None);
 		assert_eq!(cache.map.get(&2), Some(&0));
 		assert_eq!(cache.head, Some(0));
@@ -414,7 +584,15 @@ mod tests {
 		assert_eq!(cache.len, 1);
 
 		cache.write(3, "three");
-		assert_eq!(cache.items, vec![Some(Node::new(3, "three", None, None))]);
+		assert_eq!(
+			cache.items,
+			vec![Some(Node {
+				key: 3,
+				value: "three",
+				prev: None,
+				next: None
+			})]
+		);
 		assert_eq!(cache.map.get(&1), None);
 		assert_eq!(cache.map.get(&2), None);
 		assert_eq!(cache.map.get(&3), Some(&0));
@@ -423,20 +601,53 @@ mod tests {
 		assert_eq!(cache.len, 1);
 	}
 
-	// #[test]
-	// fn lru_cache_test() {
-	// 	let mut cache = LruCache::new(2);
-	// 	cache.write(1, "one");
-	// 	cache.write(2, "two");
-	// 	assert_eq!(cache.read(&1), Some(&"one"));
-	// 	assert_eq!(cache.read(&2), Some(&"two"));
-	// 	cache.write(3, "three");
-	// 	assert_eq!(cache.read(&1), None);
-	// 	assert_eq!(cache.read(&2), Some(&"two"));
-	// 	assert_eq!(cache.read(&3), Some(&"three"));
-	// 	cache.write(4, "four");
-	// 	assert_eq!(cache.read(&2), None);
-	// 	assert_eq!(cache.read(&3), Some(&"three"));
-	// 	assert_eq!(cache.read(&4), Some(&"four"));
-	// }
+	#[test]
+	fn read_test() {
+		let mut cache = LruCache::new(2);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		assert_eq!(cache.map.len(), 2);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.read(&1), Some(&"one"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+
+		cache.write(3, "three");
+		assert_eq!(cache.map.len(), 2);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "three");
+		assert_eq!(cache.read(&1), None);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "three");
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "three");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "three");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.read(&3), Some(&"three"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "three");
+
+		cache.write(4, "four");
+		assert_eq!(cache.map.len(), 2);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "three");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "four");
+		assert_eq!(cache.read(&2), None);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "three");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "four");
+		assert_eq!(cache.read(&3), Some(&"three"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "four");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "three");
+		assert_eq!(cache.read(&4), Some(&"four"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "three");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "four");
+	}
 }
