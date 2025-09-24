@@ -198,7 +198,11 @@ where
 	}
 
 	pub fn clear(&mut self) {
-		todo!()
+		self.items.clear();
+		self.head = None;
+		self.tail = None;
+		self.map.clear();
+		self.len = 0;
 	}
 
 	pub fn len(&self) -> usize {
@@ -213,6 +217,19 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use std::{cell::RefCell, rc::Rc};
+
+	#[derive(Debug, Clone, PartialEq)]
+	struct DropSpy {
+		id: usize,
+		log: Rc<RefCell<Vec<usize>>>,
+	}
+
+	impl Drop for DropSpy {
+		fn drop(&mut self) {
+			self.log.borrow_mut().push(self.id);
+		}
+	}
 
 	#[test]
 	fn write_items_test() {
@@ -649,5 +666,60 @@ mod tests {
 		assert_eq!(cache.read(&4), Some(&"four"));
 		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "three");
 		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "four");
+	}
+
+	#[test]
+	fn clear_test() {
+		let log = Rc::new(RefCell::new(Vec::new()));
+		let mut cache = LruCache::new(2);
+
+		cache.write(
+			1,
+			DropSpy {
+				id: 1,
+				log: log.clone(),
+			},
+		);
+		cache.write(
+			2,
+			DropSpy {
+				id: 2,
+				log: log.clone(),
+			},
+		);
+		cache.clear();
+
+		{
+			let mut seen = log.borrow().clone();
+			seen.sort();
+			assert_eq!(seen, vec![1, 2]);
+		}
+
+		assert_eq!(cache.len(), 0);
+		assert_eq!(cache.capacity, 2);
+		assert!(cache.items.is_empty());
+		assert_eq!(cache.head, None);
+		assert_eq!(cache.tail, None);
+		assert!(cache.map.is_empty());
+
+		let item = DropSpy {
+			id: 3,
+			log: log.clone(),
+		};
+		cache.write(3, item.clone());
+		assert_eq!(cache.len(), 1);
+		assert_eq!(cache.capacity, 2);
+		assert_eq!(cache.read(&1), None);
+		assert_eq!(cache.read(&2), None);
+		assert_eq!(cache.read(&3), Some(&item));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, item);
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, item);
+		assert_eq!(cache.map.len(), 1);
+
+		{
+			let mut seen = log.borrow().clone();
+			seen.sort();
+			assert_eq!(seen, vec![1, 2]);
+		}
 	}
 }
