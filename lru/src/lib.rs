@@ -194,7 +194,45 @@ where
 	}
 
 	pub fn delete(&mut self, key: &K) -> Result<(), ()> {
-		todo!()
+		let index = match self.map.get(key).copied() {
+			Some(idx) => idx,
+			None => return Err(()),
+		};
+
+		let (prev, next) = {
+			let item = self.items[index].as_ref().expect("BUG: node not found");
+			(item.prev, item.next)
+		};
+
+		// attach prev to next
+		if let Some(prev) = prev {
+			self.items[prev].as_mut().expect("BUG: prev node not found").next = next;
+		}
+
+		// attach next to prev
+		if let Some(next) = next {
+			self.items[next].as_mut().expect("BUG: next node not found").prev = prev;
+		}
+
+		// remove from map
+		self.map.remove(&key);
+
+		// remove item
+		self.items[index] = None;
+
+		// if the removed node was at the head replace it with the item after
+		if self.head == Some(index) {
+			self.head = next;
+		}
+
+		// if the removed node was at the tail replace it with the item before
+		if self.tail == Some(index) {
+			self.tail = prev;
+		}
+
+		self.len -= 1;
+
+		Ok(())
 	}
 
 	pub fn clear(&mut self) {
@@ -229,6 +267,12 @@ mod tests {
 		fn drop(&mut self) {
 			self.log.borrow_mut().push(self.id);
 		}
+	}
+
+	#[should_panic]
+	#[test]
+	fn zero_capacity_test() {
+		LruCache::<i32, &str>::new(0);
 	}
 
 	#[test]
@@ -721,5 +765,182 @@ mod tests {
 			seen.sort();
 			assert_eq!(seen, vec![1, 2]);
 		}
+	}
+
+	#[test]
+	fn delete_missing_test() {
+		let mut cache = LruCache::<i32, &str>::new(2);
+		assert_eq!(cache.delete(&42), Err(()));
+		assert_eq!(cache.len(), 0);
+		assert!(cache.map.is_empty());
+		assert_eq!(cache.head, None);
+		assert_eq!(cache.tail, None);
+
+		let mut cache = LruCache::new(2);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		let head = cache.head;
+		let tail = cache.tail;
+
+		assert_eq!(cache.delete(&999), Err(()));
+		assert_eq!(cache.len(), 2);
+		assert_eq!(cache.map.len(), 2);
+		assert_eq!(cache.head, head);
+		assert_eq!(cache.tail, tail);
+	}
+
+	#[test]
+	fn delete_single_test() {
+		let mut cache = LruCache::new(2);
+		cache.write(1, "one");
+		assert_eq!(cache.len(), 1);
+		assert_eq!(cache.delete(&1), Ok(()));
+		assert_eq!(cache.len(), 0);
+		assert!(cache.map.is_empty());
+		assert_eq!(cache.head, None);
+		assert_eq!(cache.tail, None);
+	}
+
+	#[test]
+	fn delete_head_test() {
+		let mut cache = LruCache::new(2);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		assert_eq!(cache.map.len(), 2);
+		assert_eq!(cache.len(), 2);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+
+		assert_eq!(cache.delete(&1), Ok(()));
+		assert_eq!(cache.map.len(), 1);
+		assert_eq!(cache.len(), 1);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+	}
+
+	#[test]
+	fn delete_tail_test() {
+		let mut cache = LruCache::new(2);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		assert_eq!(cache.map.len(), 2);
+		assert_eq!(cache.len(), 2);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+
+		assert_eq!(cache.delete(&2), Ok(()));
+		assert_eq!(cache.map.len(), 1);
+		assert_eq!(cache.len(), 1);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "one");
+	}
+
+	#[test]
+	fn delete_center_test() {
+		let mut cache = LruCache::new(3);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		cache.write(3, "three");
+		assert_eq!(cache.map.len(), 3);
+		assert_eq!(cache.len(), 3);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "three");
+
+		assert_eq!(cache.delete(&2), Ok(()));
+		assert_eq!(cache.map.len(), 2);
+		assert_eq!(cache.len(), 2);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "three");
+	}
+
+	#[test]
+	fn complex_crud_flow_test() {
+		let mut cache = LruCache::new(3);
+		assert_eq!(cache.len(), 0);
+		assert!(cache.is_empty());
+		assert!(cache.map.is_empty());
+		assert_eq!(cache.head, None);
+		assert_eq!(cache.tail, None);
+
+		// write up to capacity
+		cache.write(1, "one");
+		cache.write(2, "two");
+		cache.write(3, "three");
+		assert_eq!(cache.len(), 3);
+		assert_eq!(cache.map.len(), 3);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "three");
+
+		// read middle
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!(cache.len(), 3);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+
+		// read head
+		assert_eq!(cache.read(&1), Some(&"one"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "three");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "one");
+
+		// delete missing is a no-op
+		assert_eq!(cache.delete(&999), Err(()));
+		assert_eq!(cache.len(), 3);
+		assert_eq!(cache.map.len(), 3);
+
+		// delete current head
+		assert_eq!(cache.delete(&3), Ok(()));
+		assert_eq!(cache.len(), 2);
+		assert_eq!(cache.map.len(), 2);
+		assert!(cache.map.get(&3).is_none());
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "one");
+
+		// write 4: no eviction (capacity=3), becomes new tail
+		cache.write(4, "four");
+		assert_eq!(cache.len(), 3);
+		assert_eq!(cache.map.len(), 3);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "four");
+
+		// read tail is a no-op
+		assert_eq!(cache.read(&4), Some(&"four"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "four");
+
+		// write 5: triggers eviction of LRU head ("two")
+		cache.write(5, "five");
+		assert_eq!(cache.len(), 3);
+		assert!(cache.map.get(&2).is_none());
+		assert!(cache.map.get(&1).is_some());
+		assert!(cache.map.get(&4).is_some());
+		assert!(cache.map.get(&5).is_some());
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "five");
+
+		// delete tail ("five")
+		assert_eq!(cache.delete(&5), Ok(()));
+		assert_eq!(cache.len(), 2);
+		assert!(cache.map.get(&5).is_none());
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "four");
+
+		// clear everything
+		cache.clear();
+		assert_eq!(cache.len(), 0);
+		assert!(cache.is_empty());
+		assert!(cache.map.is_empty());
+		assert_eq!(cache.head, None);
+		assert_eq!(cache.tail, None);
+		assert!(cache.read(&1).is_none());
+		assert!(cache.read(&4).is_none());
+
+		// behaves like fresh after clear
+		cache.write(6, "six");
+		assert_eq!(cache.len(), 1);
+		assert!(!cache.is_empty());
+		assert_eq!(cache.map.len(), 1);
+		assert_eq!(cache.read(&6), Some(&"six"));
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "six");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "six");
 	}
 }
