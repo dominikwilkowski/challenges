@@ -26,11 +26,11 @@ assert_eq!(cache.read(&"b"), None);
 // Cache order: [d, a, c]
 
 cache.write("a", 10);
-assert_eq!(cache.read("a"), Some(&10));
+assert_eq!(cache.read(&"a"), Some(&10));
 assert_eq!(cache.len(), 3);
 // Cache order: [a, d, c]
 
-assert_eq!(cache.delete("c"), Some(3));
+assert_eq!(cache.delete(&"c"), Ok(()));
 assert_eq!(cache.len(), 2);
 // Cache order: [a, d]
 
