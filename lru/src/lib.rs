@@ -610,6 +610,42 @@ mod tests {
 	}
 
 	#[test]
+	fn write_existing_keeps_single_entry_and_moves_to_mru_test() {
+		let mut cache = LruCache::new(3);
+		cache.write("a", 1);
+		cache.write("b", 2);
+		cache.write("c", 3);
+
+		cache.write("b", 20);
+		assert_eq!(cache.len(), 3);
+		assert_eq!(cache.read(&"b"), Some(&20));
+
+		cache.write("d", 4);
+		assert_eq!(cache.read(&"b"), Some(&20));
+		assert_eq!(cache.read(&"a"), None);
+	}
+
+	#[test]
+	fn write_eviction_path_after_touch_storm_evicts_true_lru_test() {
+		let mut cache = LruCache::new(3);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		cache.write(3, "three");
+
+		for _ in 0..5 {
+			cache.read(&3);
+			cache.read(&2);
+		}
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
+
+		cache.write(4, "four");
+		assert_eq!(cache.read(&1), None);
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!(cache.read(&3), Some(&"three"));
+		assert_eq!(cache.read(&4), Some(&"four"));
+	}
+
+	#[test]
 	fn write_existing_item_capacity_one_test() {
 		let mut cache = LruCache::new(1);
 
@@ -663,6 +699,20 @@ mod tests {
 	}
 
 	#[test]
+	fn write_many_eviction_path_keep_capacity_and_order_test() {
+		let mut cache = LruCache::new(3);
+		for i in 0..10 {
+			cache.write(i, i);
+		}
+
+		assert_eq!(cache.len(), 3);
+		assert_eq!(cache.read(&9), Some(&9));
+		assert_eq!(cache.read(&8), Some(&8));
+		assert_eq!(cache.read(&7), Some(&7));
+		assert_eq!(cache.read(&6), None);
+	}
+
+	#[test]
 	fn read_test() {
 		let mut cache = LruCache::new(2);
 		cache.write(1, "one");
@@ -710,6 +760,45 @@ mod tests {
 		assert_eq!(cache.read(&4), Some(&"four"));
 		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "three");
 		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "four");
+	}
+
+	#[test]
+	fn read_missing_is_noop_test() {
+		let mut cache = LruCache::new(3);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		cache.write(3, "three");
+		// Order (MRU..LRU): [3,2,1]
+
+		assert_eq!(cache.read(&999), None);
+
+		// Order unchanged
+		assert_eq!(cache.read(&3), Some(&"three"));
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!(cache.read(&1), Some(&"one"));
+	}
+
+	#[test]
+	fn read_immediately_after_eviction_returns_none_test() {
+		let mut cache = LruCache::new(1);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		assert_eq!(cache.read(&1), None);
+	}
+
+	#[test]
+	fn repeated_reads_idempotent_test() {
+		let mut cache = LruCache::new(3);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		cache.write(3, "three");
+
+		assert_eq!(cache.read(&2), Some(&"two"));
+		let after_first = (cache.head, cache.tail);
+		assert_eq!((cache.head, cache.tail), after_first);
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!((cache.head, cache.tail), after_first);
 	}
 
 	#[test]
@@ -851,6 +940,43 @@ mod tests {
 		assert_eq!(cache.len(), 2);
 		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "one");
 		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "three");
+	}
+
+	#[test]
+	fn delete_then_reinsert_same_key_test() {
+		let mut cache = LruCache::new(2);
+		cache.write("x", 1);
+		cache.write("y", 2);
+		assert_eq!(cache.delete(&"x"), Ok(()));
+		assert_eq!(cache.read(&"x"), None);
+		cache.write("x", 10);
+		assert_eq!(cache.read(&"x"), Some(&10));
+		assert_eq!(cache.len(), 2);
+	}
+
+	#[test]
+	fn delete_head_tail_then_write_links_ok_test() {
+		let mut cache = LruCache::new(3);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		cache.write(3, "three");
+
+		// Delete head (LRU) then tail (MRU)
+		assert_eq!(cache.delete(&1), Ok(()));
+		assert_eq!(cache.delete(&3), Ok(()));
+		assert_eq!(cache.len(), 1);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "two");
+
+		assert_eq!(cache.read(&2), Some(&"two"));
+		cache.write(4, "four");
+		cache.write(5, "five");
+		assert_eq!(cache.len(), 3);
+		assert_eq!(cache.items[cache.head.unwrap()].as_ref().unwrap().value, "two");
+		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "five");
+		assert_eq!(cache.read(&2), Some(&"two"));
+		assert_eq!(cache.read(&4), Some(&"four"));
+		assert_eq!(cache.read(&5), Some(&"five"));
 	}
 
 	#[test]
