@@ -166,7 +166,7 @@ where
 			self.tail = Some(self.items.len() - 1);
 
 			// if first node, also point head to new node
-			if self.items.len() == 1 {
+			if self.len == 0 {
 				self.head = Some(self.items.len() - 1);
 			}
 
@@ -977,6 +977,36 @@ mod tests {
 		assert_eq!(cache.read(&2), Some(&"two"));
 		assert_eq!(cache.read(&4), Some(&"four"));
 		assert_eq!(cache.read(&5), Some(&"five"));
+	}
+
+	#[test]
+	fn delete_all_test() {
+		let mut cache = LruCache::new(2);
+		cache.write(1, "one");
+		cache.write(2, "two");
+		assert_eq!(cache.len(), 2);
+		assert_eq!(cache.delete(&1), Ok(()));
+		assert_eq!(cache.delete(&2), Ok(()));
+		assert_eq!(cache.len(), 0);
+		assert!(cache.map.is_empty());
+		assert_eq!(cache.head, None);
+		assert_eq!(cache.tail, None);
+		cache.write(3, "three");
+		assert_eq!(
+			cache.items,
+			vec![
+				None,
+				None,
+				Some(Node {
+					key: 3,
+					value: "three",
+					prev: None,
+					next: None
+				})
+			]
+		);
+		assert_eq!(cache.head, Some(2));
+		assert_eq!(cache.tail, Some(2));
 	}
 
 	#[test]
