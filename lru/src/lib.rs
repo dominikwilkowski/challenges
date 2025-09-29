@@ -15,6 +15,7 @@ where
 {
 	items: Vec<Option<Node<K, V>>>,
 	map: HashMap<K, usize>,
+	free_slots: Vec<usize>,
 	head: Option<usize>,
 	tail: Option<usize>,
 	len: usize,
@@ -25,18 +26,23 @@ impl<K, V> LruCache<K, V>
 where
 	K: Clone + Eq + std::hash::Hash,
 {
-	pub fn new(size: usize) -> Self {
-		if size == 0 {
+	pub fn new(capacity: usize) -> Self {
+		if capacity == 0 {
 			panic!("Capacity must be greater than 0");
 		}
 
 		Self {
-			items: Vec::with_capacity(size),
-			map: HashMap::with_capacity(size),
+			items: {
+				let mut items = Vec::with_capacity(capacity);
+				items.resize_with(capacity, || None);
+				items
+			},
+			map: HashMap::with_capacity(capacity),
+			free_slots: (0..capacity).rev().collect(),
 			head: None,
 			tail: None,
 			len: 0,
-			capacity: size,
+			capacity,
 		}
 	}
 
@@ -103,8 +109,6 @@ where
 
 	pub fn write(&mut self, key: K, value: V) {
 		let tail = self.tail;
-		// TODO:
-		// - add helper functions
 
 		// UPDATE PATH
 		if let Some(new_tail) = self.map.get(&key) {
@@ -154,31 +158,33 @@ where
 		// INSERTION PATH
 		} else {
 			// add new node to items with key
+			let idx = self.free_slots.pop().expect("BUG: no free slots");
+
 			// Note: We clone here assuming that if a key is used that is expensive to clone they would use Arc to make it cheaper
-			self.items.push(Some(Node {
+			self.items[idx] = Some(Node {
 				key: key.clone(),
 				value,
 				prev: tail,
 				next: None,
-			}));
+			});
 
 			// point tail to new node
-			self.tail = Some(self.items.len() - 1);
+			self.tail = Some(idx);
 
 			// if first node, also point head to new node
 			if self.len == 0 {
-				self.head = Some(self.items.len() - 1);
+				self.head = Some(idx);
 			}
 
 			// record new nodes index into map
-			self.map.insert(key, self.items.len() - 1);
+			self.map.insert(key, idx);
 
 			// increment length
 			self.len += 1;
 
 			// point previous tail node to new tail to complete the chain
 			if let Some(tail_node) = tail {
-				self.items[tail_node].as_mut().expect("BUG: tail node not found").next = Some(self.items.len() - 1);
+				self.items[tail_node].as_mut().expect("BUG: tail node not found").next = Some(idx);
 			}
 		}
 	}
@@ -220,6 +226,9 @@ where
 		// remove item
 		self.items[index] = None;
 
+		// add newly freed slot to our available slots
+		self.free_slots.push(index);
+
 		// if the removed node was at the head replace it with the item after
 		if self.head == Some(index) {
 			self.head = next;
@@ -236,10 +245,15 @@ where
 	}
 
 	pub fn clear(&mut self) {
-		self.items.clear();
+		self.items = {
+			let mut items = Vec::with_capacity(self.capacity);
+			items.resize_with(self.capacity, || None);
+			items
+		};
 		self.head = None;
 		self.tail = None;
 		self.map.clear();
+		self.free_slots = (0..self.capacity).rev().collect();
 		self.len = 0;
 	}
 
@@ -282,12 +296,16 @@ mod tests {
 		cache.write(1, "one");
 		assert_eq!(
 			cache.items,
-			vec![Some(Node {
-				key: 1,
-				value: "one",
-				prev: None,
-				next: None
-			})]
+			vec![
+				Some(Node {
+					key: 1,
+					value: "one",
+					prev: None,
+					next: None
+				}),
+				None,
+				None,
+			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
 		assert_eq!(cache.head, Some(0));
@@ -310,6 +328,7 @@ mod tests {
 					prev: Some(0),
 					next: None
 				}),
+				None,
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -442,12 +461,16 @@ mod tests {
 		cache.write(1, "one");
 		assert_eq!(
 			cache.items,
-			vec![Some(Node {
-				key: 1,
-				value: "one",
-				prev: None,
-				next: None
-			})]
+			vec![
+				Some(Node {
+					key: 1,
+					value: "one",
+					prev: None,
+					next: None
+				}),
+				None,
+				None,
+			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
 		assert_eq!(cache.head, Some(0));
@@ -470,6 +493,7 @@ mod tests {
 					prev: Some(0),
 					next: None
 				}),
+				None,
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -494,6 +518,7 @@ mod tests {
 					prev: None,
 					next: Some(0)
 				}),
+				None,
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -510,12 +535,16 @@ mod tests {
 		cache.write(1, "one");
 		assert_eq!(
 			cache.items,
-			vec![Some(Node {
-				key: 1,
-				value: "one",
-				prev: None,
-				next: None
-			})]
+			vec![
+				Some(Node {
+					key: 1,
+					value: "one",
+					prev: None,
+					next: None
+				}),
+				None,
+				None,
+			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
 		assert_eq!(cache.head, Some(0));
@@ -538,6 +567,7 @@ mod tests {
 					prev: Some(0),
 					next: None
 				}),
+				None,
 			]
 		);
 		assert_eq!(cache.map.get(&1), Some(&0));
@@ -830,10 +860,11 @@ mod tests {
 
 		assert_eq!(cache.len(), 0);
 		assert_eq!(cache.capacity, 2);
-		assert!(cache.items.is_empty());
+		assert_eq!(cache.items.iter().all(|item| item.is_none()), true);
 		assert_eq!(cache.head, None);
 		assert_eq!(cache.tail, None);
 		assert!(cache.map.is_empty());
+		assert_eq!(cache.free_slots.len(), 2);
 
 		let item = DropSpy {
 			id: 3,
@@ -992,21 +1023,21 @@ mod tests {
 		assert_eq!(cache.head, None);
 		assert_eq!(cache.tail, None);
 		cache.write(3, "three");
+		assert_eq!(cache.len(), 1);
 		assert_eq!(
 			cache.items,
 			vec![
-				None,
 				None,
 				Some(Node {
 					key: 3,
 					value: "three",
 					prev: None,
 					next: None
-				})
+				}),
 			]
 		);
-		assert_eq!(cache.head, Some(2));
-		assert_eq!(cache.tail, Some(2));
+		assert_eq!(cache.head, Some(1));
+		assert_eq!(cache.tail, Some(1));
 	}
 
 	#[test]
