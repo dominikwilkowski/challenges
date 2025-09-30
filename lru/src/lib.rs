@@ -8,6 +8,11 @@ struct Node<K, V> {
 	pub next: Option<usize>,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum DeleteError {
+	NotFound,
+}
+
 #[derive(Debug)]
 pub struct LruCache<K, V>
 where
@@ -190,19 +195,16 @@ where
 	}
 
 	pub fn read(&mut self, key: &K) -> Option<&V> {
-		let index = match self.map.get(key).copied() {
-			Some(idx) => idx,
-			None => return None,
-		};
+		let index = self.map.get(key).copied()?;
 
 		self.move_to_tail(index);
 		Some(&self.items[index].as_ref().expect("BUG: node not found").value)
 	}
 
-	pub fn delete(&mut self, key: &K) -> Result<(), ()> {
+	pub fn delete(&mut self, key: &K) -> Result<(), DeleteError> {
 		let index = match self.map.get(key).copied() {
 			Some(idx) => idx,
-			None => return Err(()),
+			None => return Err(DeleteError::NotFound),
 		};
 
 		let (prev, next) = {
@@ -221,7 +223,7 @@ where
 		}
 
 		// remove from map
-		self.map.remove(&key);
+		self.map.remove(key);
 
 		// remove item
 		self.items[index] = None;
@@ -890,7 +892,7 @@ mod tests {
 	#[test]
 	fn delete_missing_test() {
 		let mut cache = LruCache::<i32, &str>::new(2);
-		assert_eq!(cache.delete(&42), Err(()));
+		assert_eq!(cache.delete(&42), Err(DeleteError::NotFound));
 		assert_eq!(cache.len(), 0);
 		assert!(cache.map.is_empty());
 		assert_eq!(cache.head, None);
@@ -902,7 +904,7 @@ mod tests {
 		let head = cache.head;
 		let tail = cache.tail;
 
-		assert_eq!(cache.delete(&999), Err(()));
+		assert_eq!(cache.delete(&999), Err(DeleteError::NotFound));
 		assert_eq!(cache.len(), 2);
 		assert_eq!(cache.map.len(), 2);
 		assert_eq!(cache.head, head);
@@ -1070,7 +1072,7 @@ mod tests {
 		assert_eq!(cache.items[cache.tail.unwrap()].as_ref().unwrap().value, "one");
 
 		// delete missing is a no-op
-		assert_eq!(cache.delete(&999), Err(()));
+		assert_eq!(cache.delete(&999), Err(DeleteError::NotFound));
 		assert_eq!(cache.len(), 3);
 		assert_eq!(cache.map.len(), 3);
 
