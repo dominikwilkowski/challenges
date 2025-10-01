@@ -247,15 +247,12 @@ where
 	}
 
 	pub fn clear(&mut self) {
-		self.items = {
-			let mut items = Vec::with_capacity(self.capacity);
-			items.resize_with(self.capacity, || None);
-			items
-		};
+		self.items.iter_mut().for_each(|slot| *slot = None);
+		self.map.clear();
+		self.free_slots.clear();
+		self.free_slots.extend((0..self.capacity).rev());
 		self.head = None;
 		self.tail = None;
-		self.map.clear();
-		self.free_slots = (0..self.capacity).rev().collect();
 		self.len = 0;
 	}
 
