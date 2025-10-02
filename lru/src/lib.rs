@@ -1131,6 +1131,122 @@ mod tests {
 	}
 
 	#[test]
+	fn capacity_one_complex_crud_test() {
+		let mut cache = LruCache::new(1);
+
+		// Fresh cache
+		assert_eq!(cache.len(), 0);
+		assert!(cache.is_empty());
+		assert_eq!(cache.head, None);
+		assert_eq!(cache.tail, None);
+		assert!(cache.map.is_empty());
+
+		// Write first item
+		cache.write(1, "one");
+		assert_eq!(cache.len(), 1);
+		assert!(!cache.is_empty());
+		assert_eq!(cache.map.len(), 1);
+		assert_eq!(cache.read(&1), Some(&"one"));
+		// head == tail, and single-node links are None
+		let head = cache.head.unwrap();
+		let tail = cache.tail.unwrap();
+		assert_eq!(head, tail);
+		assert!(cache.items[head].as_ref().unwrap().prev.is_none());
+		assert!(cache.items[tail].as_ref().unwrap().next.is_none());
+		assert_eq!(cache.items[head].as_ref().unwrap().value, "one");
+
+		// Reading tail is a no-op
+		assert_eq!(cache.read(&1), Some(&"one"));
+		assert_eq!(cache.head, Some(head));
+		assert_eq!(cache.tail, Some(tail));
+
+		// Update existing key in place (no eviction, still single node)
+		cache.write(1, "uno");
+		assert_eq!(cache.len(), 1);
+		assert_eq!(cache.read(&1), Some(&"uno"));
+		let head = cache.head.unwrap();
+		let tail = cache.tail.unwrap();
+		assert_eq!(head, tail);
+		assert!(cache.items[head].as_ref().unwrap().prev.is_none());
+		assert!(cache.items[tail].as_ref().unwrap().next.is_none());
+
+		// Insert a different key -> must evict old (capacity = 1)
+		cache.write(2, "two");
+		assert_eq!(cache.len(), 1);
+		assert!(cache.map.get(&1).is_none());
+		assert!(cache.map.get(&2).is_some());
+		assert_eq!(cache.read(&2), Some(&"two"));
+		// Still single node invariants
+		let head = cache.head.unwrap();
+		let tail = cache.tail.unwrap();
+		assert_eq!(head, tail);
+		assert!(cache.items[head].as_ref().unwrap().prev.is_none());
+		assert!(cache.items[tail].as_ref().unwrap().next.is_none());
+		assert_eq!(cache.items[head].as_ref().unwrap().value, "two");
+
+		// Insert yet another different key -> evict 2
+		cache.write(3, "three");
+		assert_eq!(cache.len(), 1);
+		assert!(cache.map.get(&2).is_none());
+		assert!(cache.map.get(&3).is_some());
+		assert_eq!(cache.read(&3), Some(&"three"));
+		let head = cache.head.unwrap();
+		let tail = cache.tail.unwrap();
+		assert_eq!(head, tail);
+		assert!(cache.items[head].as_ref().unwrap().prev.is_none());
+		assert!(cache.items[tail].as_ref().unwrap().next.is_none());
+		assert_eq!(cache.items[head].as_ref().unwrap().value, "three");
+
+		// Delete missing -> NotFound, nothing changes
+		assert_eq!(cache.delete(&999), Err(DeleteError::NotFound));
+		assert_eq!(cache.len(), 1);
+		assert!(cache.map.get(&3).is_some());
+		assert_eq!(cache.head, Some(head));
+		assert_eq!(cache.tail, Some(tail));
+
+		// Delete existing -> empty
+		assert_eq!(cache.delete(&3), Ok(()));
+		assert_eq!(cache.len(), 0);
+		assert!(cache.is_empty());
+		assert_eq!(cache.head, None);
+		assert_eq!(cache.tail, None);
+		assert!(cache.read(&3).is_none());
+
+		// Reinsert after delete -> behaves like fresh; indices should be reused
+		cache.write(4, "four");
+		assert_eq!(cache.len(), 1);
+		assert_eq!(cache.read(&4), Some(&"four"));
+		let head = cache.head.unwrap();
+		let tail = cache.tail.unwrap();
+		assert_eq!(head, tail);
+		assert!(cache.items[head].as_ref().unwrap().prev.is_none());
+		assert!(cache.items[tail].as_ref().unwrap().next.is_none());
+
+		// Clear and ensure we’re truly empty and ready for reuse
+		cache.clear();
+		assert_eq!(cache.len(), 0);
+		assert!(cache.is_empty());
+		assert!(cache.map.is_empty());
+		assert_eq!(cache.head, None);
+		assert_eq!(cache.tail, None);
+		assert!(cache.read(&4).is_none());
+
+		// Write again after clear, then overwrite (update path) and then evict (different key)
+		cache.write(5, "five");
+		assert_eq!(cache.read(&5), Some(&"five"));
+		cache.write(5, "cinco"); // update in place
+		assert_eq!(cache.read(&5), Some(&"cinco"));
+		cache.write(6, "six"); // evicts 5
+		assert!(cache.map.get(&5).is_none());
+		assert_eq!(cache.read(&6), Some(&"six"));
+		let head = cache.head.unwrap();
+		let tail = cache.tail.unwrap();
+		assert_eq!(head, tail);
+		assert!(cache.items[head].as_ref().unwrap().prev.is_none());
+		assert!(cache.items[tail].as_ref().unwrap().next.is_none());
+	}
+
+	#[test]
 	fn readme_test() {
 		let mut cache = LruCache::new(3);
 
