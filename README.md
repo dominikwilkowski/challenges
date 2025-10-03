@@ -8,6 +8,7 @@
 
 - [**Ranges**](./ranges)
 - [**LRU**](./lru)
+- [**Calculator**](./calc)
 
 ## License
 Copyright (c) Dominik Wilkowski.
