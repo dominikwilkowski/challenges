@@ -7,6 +7,10 @@ name = "ccalc"
 version = "1.0.0"
 
 [[package]]
+name = "http"
+version = "1.0.0"
+
+[[package]]
 name = "lru"
 version = "1.0.0"
 
