@@ -1,3 +1,3 @@
 [workspace]
-members = ["ranges", "lru", "calc", "http"]
+members = ["ranges", "lru", "calc", "server"]
 resolver = "3"

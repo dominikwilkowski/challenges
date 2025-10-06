@@ -9,6 +9,7 @@
 - [**Ranges**](./ranges)
 - [**LRU**](./lru)
 - [**Calculator**](./calc)
+- [**Server**](./server)
 
 ## License
 Copyright (c) Dominik Wilkowski.
