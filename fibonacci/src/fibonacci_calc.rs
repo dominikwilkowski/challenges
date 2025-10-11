@@ -1,6 +1,6 @@
-pub struct Fibonacci {}
+pub struct FibonacciCalc {}
 
-impl Fibonacci {
+impl FibonacciCalc {
 	pub fn calc(input: &str) -> usize {
 		let mut fibonacci_found = 0;
 		let mut offset = 0;
