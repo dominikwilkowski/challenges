@@ -10,6 +10,7 @@
 - [**LRU**](./lru)
 - [**Calculator**](./calc)
 - [**Server**](./server)
+- [**Fibonacci**](./fibonacci)
 
 ## License
 Copyright (c) Dominik Wilkowski.
