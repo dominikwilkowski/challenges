@@ -3,7 +3,7 @@ use std::{env, fs, path::PathBuf};
 const MAX_FIB_NUMBER: u64 = 1_000_000;
 
 fn main() {
-	let mut fibs = vec![0u64, 1];
+	let mut fibs = vec![1u64, 1];
 
 	loop {
 		let next = fibs[fibs.len() - 1] + fibs[fibs.len() - 2];

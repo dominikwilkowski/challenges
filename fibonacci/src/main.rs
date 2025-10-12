@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 mod fibonacci_calc;
 mod fibonacci_embed;
@@ -34,5 +34,74 @@ fn main() {
 			input[1],
 			duration.as_nanos()
 		);
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn calc_fibonacci() {
+		assert_eq!(FibonacciCalc::calc("10"), 1);
+		assert_eq!(FibonacciCalc::calc("5021"), 4);
+		assert_eq!(FibonacciCalc::calc("12345"), 5);
+		assert_eq!(FibonacciCalc::calc("1000000"), 1);
+	}
+
+	#[should_panic]
+	#[test]
+	fn calc_fibonacci_panic_non_num() {
+		FibonacciCalc::calc("abc");
+	}
+
+	#[should_panic]
+	#[test]
+	fn calc_fibonacci_panic_invalid_input() {
+		FibonacciCalc::calc("1_2");
+	}
+
+	#[should_panic]
+	#[test]
+	fn calc_fibonacci_panic_zero() {
+		FibonacciCalc::calc("0");
+	}
+
+	#[should_panic]
+	#[test]
+	fn calc_fibonacci_panic_too_large() {
+		FibonacciCalc::calc("10000001");
+	}
+
+	#[test]
+	fn embed_fibonacci() {
+		assert_eq!(FibonacciEmbed::calc("10"), 1);
+		assert_eq!(FibonacciEmbed::calc("5021"), 4);
+		assert_eq!(FibonacciEmbed::calc("12345"), 5);
+		assert_eq!(FibonacciEmbed::calc("1000000"), 1);
+	}
+
+	#[should_panic]
+	#[test]
+	fn embed_fibonacci_panic_non_num() {
+		FibonacciEmbed::calc("abc");
+	}
+
+	#[should_panic]
+	#[test]
+	fn embed_fibonacci_panic_invalid_input() {
+		FibonacciEmbed::calc("1_2");
+	}
+
+	#[should_panic]
+	#[test]
+	fn embed_fibonacci_panic_zero() {
+		FibonacciEmbed::calc("0");
+	}
+
+	#[should_panic]
+	#[test]
+	fn embed_fibonacci_panic_too_large() {
+		FibonacciEmbed::calc("10000001");
 	}
 }
