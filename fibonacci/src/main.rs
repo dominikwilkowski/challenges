@@ -15,25 +15,53 @@ fn main() {
 		eprintln!("Error: Too many arguments");
 		std::process::exit(1);
 	} else {
-		// Calc path
-		let start = Instant::now();
-		let found = FibonacciCalc::calc(&input[1]);
-		let duration = start.elapsed();
-		println!(
-			"For the input \"{}\" we found \"{found}\" fibonacci numbers by calculating each number within {} nanoseconds",
-			input[1],
-			duration.as_nanos()
-		);
+		const ITERATIONS: u32 = 1_000_000;
 
-		// Embed path
-		let start = Instant::now();
-		let found = FibonacciEmbed::calc(&input[1]);
-		let duration = start.elapsed();
-		println!(
-			"For the input \"{}\" we found \"{found}\" fibonacci numbers by looking each number up within  {} nanoseconds",
-			input[1],
-			duration.as_nanos()
-		);
+		{
+			// CALC PATH
+			// --- Warm-up phase ---
+			for _ in 0..1000 {
+				let _ = FibonacciCalc::calc(&input[1]);
+			}
+
+			// --- Measurement phase ---
+			let start = Instant::now();
+			for _ in 0..ITERATIONS - 1 {
+				let _ = FibonacciCalc::calc(&input[1]);
+			}
+			let found = FibonacciCalc::calc(&input[1]);
+			let duration = start.elapsed();
+
+			// --- Reporting phase ---
+			let avg = duration.as_nanos() as f64 / ITERATIONS as f64;
+			println!(
+				"For the input \"{}\" we found \"{found}\" fibonacci numbers by calculating each number within an average of {avg:.2} nanoseconds",
+				input[1]
+			);
+		}
+
+		{
+			// EMBED PATH
+			// --- Warm-up phase ---
+			for _ in 0..1000 {
+				let _ = FibonacciEmbed::calc(&input[1]);
+			}
+
+			// --- Measurement phase ---
+			let start = Instant::now();
+			for _ in 0..ITERATIONS - 1 {
+				let _ = FibonacciEmbed::calc(&input[1]);
+			}
+			let found = FibonacciEmbed::calc(&input[1]);
+			let duration = start.elapsed();
+
+			// --- Reporting phase ---
+			let avg = duration.as_nanos() as f64 / ITERATIONS as f64;
+			println!(
+				"For the input \"{}\" we found \"{found}\" fibonacci numbers by looking each number up within an average of  {avg:.2} nanoseconds",
+				input[1]
+			);
+		}
 	}
 }
 
