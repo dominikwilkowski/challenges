@@ -19,5 +19,9 @@ name = "ranges"
 version = "1.0.0"
 
 [[package]]
+name = "robot"
+version = "1.0.0"
+
+[[package]]
 name = "server"
 version = "1.0.0"
