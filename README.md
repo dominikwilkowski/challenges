@@ -11,6 +11,8 @@
 - [**Calculator**](./calc)
 - [**Server**](./server)
 - [**Fibonacci**](./fibonacci)
+- [**Robot**](./robot)
+- [**Streaming**](./streaming)
 
 ## License
 Copyright (c) Dominik Wilkowski.

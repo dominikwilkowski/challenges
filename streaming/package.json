@@ -1,0 +1,14 @@
+{
+	"name": "streaming",
+	"version": "1.0.0",
+	"scripts": {
+		"dev": "tsc --watch",
+		"build": "tsc; npm run build:cp-public",
+		"build:cp-public": "cp ./public/** ./dist",
+		"type": "tsc --noEmit"
+	},
+	"license": "ISC",
+	"devDependencies": {
+		"typescript": "^5.0.4"
+	}
+}
