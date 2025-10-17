@@ -13,6 +13,7 @@
 - [**Fibonacci**](./fibonacci)
 - [**Robot**](./robot)
 - [**Streaming**](./streaming)
+- [**Recursion vs Worker**](./recursion_worker)
 
 ## License
 Copyright (c) Dominik Wilkowski.
