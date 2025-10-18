@@ -77,16 +77,153 @@ function runStream() {
 	}, 20);
 }
 
-/*
-Please edit the addToken method to support at least inline codeblocks and codeblocks. Feel free to add any other methods you need.
-This starter code does token streaming with no styling right now. Your job is to write the parsing logic to make the styling work.
+type GlobalState = {
+	open_block: boolean;
+	buffer: string;
+	heading_level: number;
+	inside_code_block: boolean;
+	code_block_lang: string;
+};
 
-Note: don't be afraid of using globals for state. For this challenge, speed is preferred over cleanliness.
- */
-function addToken(token: string) {
-	if (!currentContainer) return;
+const state: GlobalState = {
+	open_block: false,
+	buffer: "\n",
+	heading_level: 0,
+	inside_code_block: false,
+	code_block_lang: "",
+};
 
-	const span = document.createElement("span");
-	span.innerText = token;
-	currentContainer.appendChild(span);
+function addToken(chunk: string) {
+	if (!currentContainer) {
+		throw new Error("No current container set");
+	}
+
+	chunk = chunk.replaceAll("\r\n", "\n");
+
+	for (const char of chunk) {
+		const { outcome, elements } = parse_markdown(char);
+		if (outcome === ParserOutcome.Continue) {
+			continue;
+		} else if (outcome === ParserOutcome.FlushToNewElement) {
+			const { root, inner } = createNestedElements(elements);
+			inner.textContent = char;
+			currentContainer.appendChild(root);
+		} else if (outcome === ParserOutcome.FlushToLastElement) {
+			const last = currentContainer.lastElementChild as HTMLElement;
+			last.textContent += char;
+		}
+	}
+}
+
+function createNestedElements(tags: string[]): {
+	root: HTMLElement;
+	inner: HTMLElement;
+} {
+	let root = null;
+	let current = null;
+
+	for (const tag of tags) {
+		const el = document.createElement(tag);
+		if (!root) {
+			root = el;
+		} else {
+			current!.appendChild(el);
+		}
+		current = el;
+	}
+
+	return { root: root!, inner: current! };
+}
+
+enum ParserOutcome {
+	Continue,
+	FlushToNewElement,
+	FlushToLastElement,
+}
+
+function parse_markdown(char: string): {
+	outcome: ParserOutcome;
+	elements: string[];
+} {
+	// HEADINGS
+	if (
+		(char === "#" && state.buffer.at(-1) === "\n") ||
+		(char === "#" && state.buffer.at(-1) === "#")
+	) {
+		state.heading_level++;
+		return {
+			outcome: ParserOutcome.Continue,
+			elements: [""],
+		};
+	} else if (char === " " && state.heading_level > 0 && !state.open_block) {
+		state.open_block = true;
+		return {
+			outcome: ParserOutcome.FlushToNewElement,
+			elements: [`h${state.heading_level}`],
+		};
+	} else if (char === " " && state.heading_level > 0 && state.open_block) {
+		return {
+			outcome: ParserOutcome.FlushToLastElement,
+			elements: [""],
+		};
+	} else if (char !== "\n" && state.heading_level > 0) {
+		return {
+			outcome: ParserOutcome.FlushToLastElement,
+			elements: [""],
+		};
+	} else if (char === "\n" && state.heading_level > 0) {
+		state.open_block = false;
+		state.heading_level = 0;
+		state.buffer = "\n";
+
+		return {
+			outcome: ParserOutcome.FlushToNewElement,
+			elements: ["p"],
+		};
+	}
+
+	// CODE BLOCKS
+	if (state.buffer === "\n```" && char !== "\n" && !state.inside_code_block) {
+		state.code_block_lang += char;
+		return {
+			outcome: ParserOutcome.Continue,
+			elements: [""],
+		};
+	} else if (
+		state.buffer === "\n```" &&
+		char === "\n" &&
+		!state.inside_code_block
+	) {
+		state.inside_code_block = true;
+		return {
+			outcome: ParserOutcome.FlushToNewElement,
+			elements: ["pre", "code"],
+		};
+	} else if (state.inside_code_block) {
+		return {
+			outcome: ParserOutcome.FlushToLastElement,
+			elements: [""],
+		};
+	} else if (
+		state.buffer === "\n```" &&
+		char !== "\n" &&
+		state.inside_code_block
+	) {
+		state.inside_code_block = false;
+		state.code_block_lang = "";
+		return {
+			outcome: ParserOutcome.FlushToNewElement,
+			elements: ["p"],
+		};
+	}
+
+	state.buffer += char;
+	if (char === "\n") {
+		state.buffer = "\n";
+	}
+
+	return {
+		outcome: ParserOutcome.FlushToLastElement,
+		elements: [""],
+	};
 }
