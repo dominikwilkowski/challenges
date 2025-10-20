@@ -12,8 +12,8 @@
 - [**Server**](./server)
 - [**Fibonacci**](./fibonacci)
 - [**Robot**](./robot)
-- [**Streaming**](./streaming)
 - [**Recursion vs Worker**](./recursion_worker)
+- [**Trains**](./trains)
 
 ## License
 Copyright (c) Dominik Wilkowski.
