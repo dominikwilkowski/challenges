@@ -42,3 +42,16 @@ For the test input, the towns are named using the first few letters of the alpha
 A route between two towns (A to B) with a distance of 5 is represented as AB5.
 
 Graph: AB5, BC4, CD8, DC8, DE6, AD5, CE2, EB3, AE7
+
+```mermaid
+graph LR
+	A --5-----> B
+	B --4----> C
+	C --8--------> D
+	D --8--------> C
+	D --6------> E
+	A --5-----> D
+	C --2--> E
+	E --3---> B
+	A --7-------> E
+```
