@@ -14,6 +14,8 @@ fn main() {
 		.add_route("E", "B", 3)
 		.add_route("A", "E", 7);
 
+	println!("{railroad:#?}");
+
 	// 1. The distance of the route A-B-C.
 	// 2. The distance of the route A-D.
 	// 3. The distance of the route A-D-C.
@@ -43,22 +45,6 @@ fn main() {
 #[cfg(test)]
 mod testing {
 	use super::*;
-
-	#[test]
-	fn new_test() {
-		let _railroad = Railroad::new()
-			.add_route("A", "B", 5)
-			.add_route("B", "C", 4)
-			.add_route("C", "D", 8)
-			.add_route("D", "C", 8)
-			.add_route("D", "E", 6)
-			.add_route("A", "D", 5)
-			.add_route("C", "E", 2)
-			.add_route("E", "B", 3)
-			.add_route("A", "E", 7);
-
-		// assert routes inputted
-	}
 
 	#[test]
 	fn get_distance_test() {
