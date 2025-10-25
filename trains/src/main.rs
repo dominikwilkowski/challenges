@@ -14,8 +14,6 @@ fn main() {
 		.add_route("E", "B", 3)
 		.add_route("A", "E", 7);
 
-	println!("{railroad:#?}");
-
 	// 1. The distance of the route A-B-C.
 	// 2. The distance of the route A-D.
 	// 3. The distance of the route A-D-C.
@@ -25,13 +23,13 @@ fn main() {
 	debug_assert_eq!(railroad.get_distance(vec!["A", "D"]), 5);
 	debug_assert_eq!(railroad.get_distance(vec!["A", "D", "C"]), 13);
 	debug_assert_eq!(railroad.get_distance(vec!["A", "E", "B", "C", "D"]), 22);
-	debug_assert_eq!(railroad.get_distance(vec!["A", "E", "D"]), 13);
+	// should_panic: debug_assert_eq!(railroad.get_distance(vec!["A", "E", "D"]), 13);
 
 	// 6. The number of trips starting at C and ending at C with a maximum of 3 stops.
-	debug_assert_eq!(railroad.get_routes_max_stops("C", "C", 3), 2);
+	debug_assert_eq!(railroad.get_trips_max_stops("C", "C", 3), 2);
 
 	// 7. The number of trips starting at A and ending at C with exactly 4 stops.
-	debug_assert_eq!(railroad.get_routes_with_stops("A", "C", 4), 1);
+	debug_assert_eq!(railroad.get_trips_with_stops("A", "C", 4), 1);
 
 	// 8. The length of the shortest route (in terms of distance to travel) from A to C.
 	// 9. The length of the shortest route (in terms of distance to travel) from B to B.
@@ -95,7 +93,7 @@ mod testing {
 			.add_route("E", "B", 3)
 			.add_route("A", "E", 7);
 
-		assert_eq!(railroad.get_routes_max_stops("C", "C", 3), 2);
+		assert_eq!(railroad.get_trips_max_stops("C", "C", 3), 2);
 	}
 
 	#[test]
@@ -111,7 +109,7 @@ mod testing {
 			.add_route("E", "B", 3)
 			.add_route("A", "E", 7);
 
-		assert_eq!(railroad.get_routes_with_stops("A", "C", 4), 1);
+		assert_eq!(railroad.get_trips_with_stops("A", "C", 4), 1);
 	}
 
 	#[test]

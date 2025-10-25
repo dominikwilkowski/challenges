@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, PartialEq)]
 pub struct Route {
@@ -89,16 +89,37 @@ impl Railroad {
 		distance
 	}
 
-	pub fn get_routes_max_stops(&self, _from: &str, _to: &str, _max_stops: u8) -> u8 {
+	pub fn get_trips_max_stops(&self, _from: &str, _to: &str, _max_stops: u8) -> u8 {
 		todo!("Find number of trips with max stops");
 	}
 
-	pub fn get_routes_with_stops(&self, _from: &str, _to: &str, _stops: u8) -> u8 {
+	pub fn get_trips_with_stops(&self, _from: &str, _to: &str, _stops: u8) -> u8 {
 		todo!("Find number of trips with exact stops");
 	}
 
-	pub fn get_shortest_route_length(&self, _from: &str, _to: &str) -> u8 {
-		todo!("Find shortest route");
+	pub fn get_shortest_route_length(&self, from: &str, to: &str) -> u8 {
+		let mut visited = HashSet::new();
+		let mut que = VecDeque::new();
+
+		que.push_back((from, 0));
+
+		while let Some((current, distance)) = que.pop_front() {
+			if let Some(station) = self.stations.get(current) {
+				for route in &station.routes {
+					let next = route.destination.as_str();
+					if visited.insert(next) {
+						if next == to {
+							return distance + route.distance;
+						}
+						que.push_back((next, distance + route.distance));
+					}
+				}
+			} else {
+				panic!("NO SUCH ROUTE");
+			}
+		}
+
+		panic!("NO SUCH ROUTE");
 	}
 
 	pub fn get_routes_max_distance(&self, _from: &str, _to: &str, _max_distance: u8) -> u8 {
