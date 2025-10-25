@@ -11,6 +11,11 @@ pub struct Station {
 	routes: Vec<Route>,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum Error {
+	StationNotFound,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Railroad {
 	stations: HashMap<String, Station>,
@@ -52,8 +57,36 @@ impl Railroad {
 		self
 	}
 
-	pub fn get_distance(&self, _route: Vec<&str>) -> u8 {
-		todo!("Calculate distance");
+	fn get_distance_from_to(&self, from: &str, to: &str) -> Result<u8, Error> {
+		if let Some(station) = self.stations.get(from) {
+			if let Some(route) = station.routes.iter().find(|route| route.destination == to) {
+				Ok(route.distance)
+			} else {
+				Err(Error::StationNotFound)
+			}
+		} else {
+			Err(Error::StationNotFound)
+		}
+	}
+
+	pub fn get_distance(&self, route: Vec<&str>) -> u8 {
+		if route.is_empty() {
+			return 0;
+		}
+
+		let mut distance = 0;
+		let mut from = route[0];
+
+		for i in 1..route.len() {
+			if let Ok(dis) = self.get_distance_from_to(from, route[i]) {
+				distance += dis;
+			} else {
+				panic!("NO SUCH ROUTE");
+			}
+			from = route[i];
+		}
+
+		distance
 	}
 
 	pub fn get_routes_max_stops(&self, _from: &str, _to: &str, _max_stops: u8) -> u8 {
@@ -68,7 +101,7 @@ impl Railroad {
 		todo!("Find shortest route");
 	}
 
-	pub fn get_number_routes_max_distance(&self, _from: &str, _to: &str, _max_distance: u8) -> u8 {
+	pub fn get_routes_max_distance(&self, _from: &str, _to: &str, _max_distance: u8) -> u8 {
 		todo!("Find how many routes");
 	}
 }

@@ -39,7 +39,7 @@ fn main() {
 	debug_assert_eq!(railroad.get_shortest_route_length("B", "B"), 9);
 
 	// 10. The number of different routes from C to C with a distance of less than 30.
-	debug_assert_eq!(railroad.get_number_routes_max_distance("C", "C", 30), 3);
+	debug_assert_eq!(railroad.get_routes_max_distance("C", "C", 30), 3);
 }
 
 #[cfg(test)]
@@ -63,7 +63,23 @@ mod testing {
 		assert_eq!(railroad.get_distance(vec!["A", "D"]), 5);
 		assert_eq!(railroad.get_distance(vec!["A", "D", "C"]), 13);
 		assert_eq!(railroad.get_distance(vec!["A", "E", "B", "C", "D"]), 22);
-		assert_eq!(railroad.get_distance(vec!["A", "E", "D"]), 13);
+	}
+
+	#[should_panic]
+	#[test]
+	fn get_distance_missing() {
+		let railroad = Railroad::new()
+			.add_route("A", "B", 5)
+			.add_route("B", "C", 4)
+			.add_route("C", "D", 8)
+			.add_route("D", "C", 8)
+			.add_route("D", "E", 6)
+			.add_route("A", "D", 5)
+			.add_route("C", "E", 2)
+			.add_route("E", "B", 3)
+			.add_route("A", "E", 7);
+
+		railroad.get_distance(vec!["A", "E", "D"]);
 	}
 
 	#[test]
@@ -116,7 +132,7 @@ mod testing {
 	}
 
 	#[test]
-	fn get_number_routes_max_distance_test() {
+	fn get_routes_max_distance_test() {
 		let railroad = Railroad::new()
 			.add_route("A", "B", 5)
 			.add_route("B", "C", 4)
@@ -128,6 +144,6 @@ mod testing {
 			.add_route("E", "B", 3)
 			.add_route("A", "E", 7);
 
-		assert_eq!(railroad.get_number_routes_max_distance("C", "C", 30), 3);
+		assert_eq!(railroad.get_routes_max_distance("C", "C", 30), 3);
 	}
 }
