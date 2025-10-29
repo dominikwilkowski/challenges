@@ -1,7 +1,6 @@
-[workspace]
-members = ["generate_csv", "process_csv"]
-default-members = ["process_csv"]
-resolver = "3"
+[package]
+name = "process_csv"
+version = "1.0.0"
+edition = "2024"
 
-[profile.release]
-debug = true
+[dependencies]
