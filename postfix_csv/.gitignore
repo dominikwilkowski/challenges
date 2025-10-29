@@ -1,0 +1,3 @@
+# Build artifact
+*.csv
+flamegraph.svg
