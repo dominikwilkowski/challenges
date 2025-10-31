@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Route {
 	destination: String,
 	distance: u8,
@@ -16,9 +16,18 @@ pub enum Error {
 	StationNotFound,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct Trip {
+	stops: Vec<String>,
+	distance: u8,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Railroad {
 	stations: HashMap<String, Station>,
+	stack: Vec<String>,
+	visited: HashSet<String>,
+	trips: Vec<Trip>,
 }
 
 impl Railroad {
@@ -34,6 +43,9 @@ impl Railroad {
 	pub fn new() -> Self {
 		Self {
 			stations: HashMap::new(),
+			stack: Vec::new(),
+			visited: HashSet::new(),
+			trips: Vec::new(),
 		}
 	}
 
@@ -89,8 +101,41 @@ impl Railroad {
 		distance
 	}
 
-	pub fn get_trips_max_stops(&self, _from: &str, _to: &str, _max_stops: u8) -> u8 {
-		todo!("Find number of trips with max stops");
+	fn get_trips(&mut self, current_station: &str, to: &str, running_weight: u8) {
+		if current_station == to {
+			if !self.stack.is_empty() {
+				let stops = self.stack.clone();
+				self.trips.push(Trip {
+					stops: stops[..self.stack.len() - 1].to_vec(),
+					distance: running_weight,
+				});
+			}
+		}
+
+		if let Some(station) = self.stations.get(current_station) {
+			for route in &station.routes.clone() {
+				if !self.visited.contains(&route.destination) {
+					self.stack.push(route.destination.to_string());
+					self.visited.insert(route.destination.to_string());
+
+					self.get_trips(&route.destination, to, running_weight + route.distance);
+
+					self.stack.pop();
+					self.visited.remove(&route.destination);
+				}
+			}
+		}
+	}
+
+	pub fn get_trips_max_stops(&mut self, from: &str, to: &str, max_stops: u8) -> u8 {
+		self.get_trips(from, to, 0);
+		let mut trips = self.trips.clone();
+		self.stack.clear();
+		self.visited.clear();
+		self.trips.clear();
+
+		trips.retain(|trip| trip.stops.len() <= max_stops as usize);
+		trips.len() as u8
 	}
 
 	pub fn get_trips_with_stops(&self, _from: &str, _to: &str, _stops: u8) -> u8 {

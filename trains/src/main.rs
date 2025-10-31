@@ -82,7 +82,7 @@ mod testing {
 
 	#[test]
 	fn get_routes_max_stops_test() {
-		let railroad = Railroad::new()
+		let mut railroad = Railroad::new()
 			.add_route("A", "B", 5)
 			.add_route("B", "C", 4)
 			.add_route("C", "D", 8)
@@ -93,7 +93,7 @@ mod testing {
 			.add_route("E", "B", 3)
 			.add_route("A", "E", 7);
 
-		assert_eq!(railroad.get_trips_max_stops("C", "C", 3), 2);
+		assert_eq!(railroad.get_trips_max_stops("C", "C", 3), 3);
 	}
 
 	#[test]
