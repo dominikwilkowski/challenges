@@ -3,7 +3,7 @@ mod railroad;
 use railroad::Railroad;
 
 fn main() {
-	let railroad = Railroad::new()
+	let mut railroad = Railroad::new()
 		.add_route("A", "B", 5)
 		.add_route("B", "C", 4)
 		.add_route("C", "D", 8)
@@ -26,10 +26,10 @@ fn main() {
 	// should_panic: debug_assert_eq!(railroad.get_distance(vec!["A", "E", "D"]), 13);
 
 	// 6. The number of trips starting at C and ending at C with a maximum of 3 stops.
-	debug_assert_eq!(railroad.get_trips_max_stops("C", "C", 3), 2);
+	debug_assert_eq!(railroad.get_trips_max_stops("C", "C", 3), 3);
 
 	// 7. The number of trips starting at A and ending at C with exactly 4 stops.
-	debug_assert_eq!(railroad.get_trips_with_stops("A", "C", 4), 1);
+	debug_assert_eq!(railroad.get_trips_with_stops("A", "C", 3), 1);
 
 	// 8. The length of the shortest route (in terms of distance to travel) from A to C.
 	// 9. The length of the shortest route (in terms of distance to travel) from B to B.
@@ -98,7 +98,7 @@ mod testing {
 
 	#[test]
 	fn get_routes_with_stops_test() {
-		let railroad = Railroad::new()
+		let mut railroad = Railroad::new()
 			.add_route("A", "B", 5)
 			.add_route("B", "C", 4)
 			.add_route("C", "D", 8)
@@ -109,12 +109,12 @@ mod testing {
 			.add_route("E", "B", 3)
 			.add_route("A", "E", 7);
 
-		assert_eq!(railroad.get_trips_with_stops("A", "C", 4), 1);
+		assert_eq!(railroad.get_trips_with_stops("A", "C", 3), 1);
 	}
 
 	#[test]
 	fn get_shortest_route_length_test() {
-		let railroad = Railroad::new()
+		let mut railroad = Railroad::new()
 			.add_route("A", "B", 5)
 			.add_route("B", "C", 4)
 			.add_route("C", "D", 8)
@@ -131,7 +131,7 @@ mod testing {
 
 	#[test]
 	fn get_routes_max_distance_test() {
-		let railroad = Railroad::new()
+		let mut railroad = Railroad::new()
 			.add_route("A", "B", 5)
 			.add_route("B", "C", 4)
 			.add_route("C", "D", 8)

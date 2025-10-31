@@ -31,10 +31,6 @@ pub struct Railroad {
 }
 
 impl Railroad {
-	fn get_station(&self, station_name: &str) -> Option<&Station> {
-		self.stations.get(station_name)
-	}
-
 	fn get_station_mut(&mut self, station_name: &str) -> Option<&mut Station> {
 		self.stations.get_mut(station_name)
 	}
@@ -89,27 +85,25 @@ impl Railroad {
 		let mut distance = 0;
 		let mut from = route[0];
 
-		for i in 1..route.len() {
-			if let Ok(dis) = self.get_distance_from_to(from, route[i]) {
+		for sub_route in route.iter().skip(1) {
+			if let Ok(dis) = self.get_distance_from_to(from, sub_route) {
 				distance += dis;
 			} else {
 				panic!("NO SUCH ROUTE");
 			}
-			from = route[i];
+			from = sub_route;
 		}
 
 		distance
 	}
 
 	fn get_trips(&mut self, current_station: &str, to: &str, running_weight: u8) {
-		if current_station == to {
-			if !self.stack.is_empty() {
-				let stops = self.stack.clone();
-				self.trips.push(Trip {
-					stops: stops[..self.stack.len() - 1].to_vec(),
-					distance: running_weight,
-				});
-			}
+		if current_station == to && !self.stack.is_empty() {
+			let stops = self.stack.clone();
+			self.trips.push(Trip {
+				stops: stops[..self.stack.len() - 1].to_vec(),
+				distance: running_weight,
+			});
 		}
 
 		if let Some(station) = self.stations.get(current_station) {
@@ -138,11 +132,18 @@ impl Railroad {
 		trips.len() as u8
 	}
 
-	pub fn get_trips_with_stops(&self, _from: &str, _to: &str, _stops: u8) -> u8 {
-		todo!("Find number of trips with exact stops");
+	pub fn get_trips_with_stops(&mut self, from: &str, to: &str, stops: u8) -> u8 {
+		self.get_trips(from, to, 0);
+		let mut trips = self.trips.clone();
+		self.stack.clear();
+		self.visited.clear();
+		self.trips.clear();
+
+		trips.retain(|trip| trip.stops.len() == stops as usize);
+		trips.len() as u8
 	}
 
-	pub fn get_shortest_route_length(&self, from: &str, to: &str) -> u8 {
+	pub fn get_shortest_route_length(&mut self, from: &str, to: &str) -> u8 {
 		let mut visited = HashSet::new();
 		let mut que = VecDeque::new();
 
@@ -167,8 +168,15 @@ impl Railroad {
 		panic!("NO SUCH ROUTE");
 	}
 
-	pub fn get_routes_max_distance(&self, _from: &str, _to: &str, _max_distance: u8) -> u8 {
-		todo!("Find how many routes");
+	pub fn get_routes_max_distance(&mut self, from: &str, to: &str, max_distance: u8) -> u8 {
+		self.get_trips(from, to, 0);
+		let mut trips = self.trips.clone();
+		self.stack.clear();
+		self.visited.clear();
+		self.trips.clear();
+
+		trips.retain(|trip| trip.distance <= max_distance);
+		trips.len() as u8
 	}
 }
 

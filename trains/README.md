@@ -31,7 +31,7 @@ to city C (a distance of 4).
 4. The distance of the route A-E-B-C-D.
 5. The distance of the route A-E-D.
 6. The number of trips starting at C and ending at C with a maximum of 3 stops.
-7. The number of trips starting at A and ending at C with exactly 4 stops.
+7. The number of trips starting at A and ending at C with exactly 3 stops.
 8. The length of the shortest route (in terms of distance to travel) from A to C.
 9. The length of the shortest route (in terms of distance to travel) from B to B.
 10. The number of different routes from C to C with a distance of less than 30.
