@@ -30,3 +30,6 @@ target
 node_modules
 dist
 pkg
+
+# Test data
+*.zip

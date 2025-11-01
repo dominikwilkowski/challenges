@@ -15,6 +15,7 @@
 - [**Recursion vs Worker**](./recursion_worker)
 - [**Trains**](./trains)
 - [**Postfix CSV**](./postfix_csv)
+- [**Zip**](./zip)
 
 ## License
 Copyright (c) Dominik Wilkowski.
