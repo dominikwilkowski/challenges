@@ -636,6 +636,16 @@ name = "recursion_worker"
 version = "1.0.0"
 
 [[package]]
+name = "redis"
+version = "1.0.0"
+dependencies = [
+ "base64",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"

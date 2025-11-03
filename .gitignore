@@ -33,3 +33,4 @@ pkg
 
 # Test data
 *.zip
+*.rdb
