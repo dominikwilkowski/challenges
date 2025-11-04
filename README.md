@@ -16,6 +16,8 @@
 - [**Trains**](./trains)
 - [**Postfix CSV**](./postfix_csv)
 - [**Zip**](./zip)
+- [**Redis**](./redis)
+- [**DTMF**](./dtmf)
 
 ## License
 Copyright (c) Dominik Wilkowski.
