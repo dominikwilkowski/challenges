@@ -35,4 +35,3 @@ pkg
 *.zip
 *.rdb
 */temp/**
-*.wav
