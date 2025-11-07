@@ -10,13 +10,15 @@ fn goertzel_power(frame_samples: &[i16], sample_rate_hz: f32, target_freq_hz: f3
 	let angle_per_sample = 2.0 * PI * target_freq_hz / sample_rate_hz;
 	let two_cos_angle = 2.0 * angle_per_sample.cos();
 
+	let n_tot = frame_samples.len() as f32;
 	let mut state_prev = 0.0;
 	let mut state_prev2 = 0.0;
 
-	for &raw in frame_samples {
-		let sample = raw as f32 / 32768.0;
-		let state_curr = sample + two_cos_angle * state_prev - state_prev2;
+	for (n, &raw) in frame_samples.iter().enumerate() {
+		let w = 0.5 - 0.5 * (2.0 * PI * (n as f32) / (n_tot - 1.0)).cos();
+		let sample = (raw as f32 / 32768.0) * w;
 
+		let state_curr = sample + two_cos_angle * state_prev - state_prev2;
 		state_prev2 = state_prev;
 		state_prev = state_curr;
 	}
@@ -58,14 +60,22 @@ fn argmax_and_second(values: &[f32; 4]) -> (usize, f32, f32) {
 /// missed.
 pub fn detect_digits(samples: &[i16], sample_rate_hz: f32) -> String {
 	let frame_len = ((sample_rate_hz * 0.050).round() as usize).max(64);
-	let hop_len = (frame_len / 2).max(1);
+	let hop_len = (frame_len / 4).max(1);
 
-	const MIN_DBFS: f32 = -40.0;
-	const SEP_DB: f32 = 6.0;
-	const HOLD_FRAMES: usize = 2;
+	const MIN_DBFS_ON: f32 = -44.0;
+	const MIN_DBFS_OFF: f32 = -48.0;
+	const TWIST_MAX_DB: f32 = 4.0;
+	const HOLD_FRAMES: usize = 3;
+	const GAP_FRAMES: usize = 0;
+	const SEP_DB: f32 = 8.0;
+	const RISE_DB: f32 = 2.0;
+
+	let mut prev_low_dbfs = [f32::NEG_INFINITY; 4];
+	let mut prev_high_dbfs = [f32::NEG_INFINITY; 4];
 
 	let mut active_digit: Option<char> = None;
 	let mut active_hold_frames = 0usize;
+	let mut gap_frames = 0usize;
 	let mut digits_out = String::new();
 
 	let mut frame_start = 0usize;
@@ -75,30 +85,45 @@ pub fn detect_digits(samples: &[i16], sample_rate_hz: f32) -> String {
 		let mut low_group_dbfs = [0.0; 4];
 		let mut high_group_dbfs = [0.0; 4];
 
-		for (k, &freq_hz) in LOWS.iter().enumerate() {
-			let p = goertzel_power(frame, sample_rate_hz, freq_hz);
-			low_group_dbfs[k] = power_to_dbfs(p, frame_len);
+		for (k, &f) in LOWS.iter().enumerate() {
+			low_group_dbfs[k] = power_to_dbfs(goertzel_power(frame, sample_rate_hz, f), frame_len);
 		}
-		for (k, &freq_hz) in HIGHS.iter().enumerate() {
-			let p = goertzel_power(frame, sample_rate_hz, freq_hz);
-			high_group_dbfs[k] = power_to_dbfs(p, frame_len);
+		for (k, &f) in HIGHS.iter().enumerate() {
+			high_group_dbfs[k] = power_to_dbfs(goertzel_power(frame, sample_rate_hz, f), frame_len);
 		}
 
 		// Pick the dominant low and high bins and ensure each is clearly dominant
 		// within its group; this avoids false positives from harmonics/leakage.
 		let (low_idx, low_max_db, low_runner_db) = argmax_and_second(&low_group_dbfs);
 		let (high_idx, high_max_db, high_runner_db) = argmax_and_second(&high_group_dbfs);
+		let implied = KEYPAD[low_idx][high_idx.min(2)];
 
-		let mut candidate_digit: Option<char> = None;
-		let low_ok = low_max_db > MIN_DBFS && (low_max_db - low_runner_db) >= SEP_DB;
-		let high_ok = high_max_db > MIN_DBFS && (high_max_db - high_runner_db) >= SEP_DB;
-		if low_ok && high_ok {
-			candidate_digit = Some(KEYPAD[low_idx][high_idx]);
+		let on_low = low_max_db > MIN_DBFS_ON && (low_max_db - low_runner_db) >= SEP_DB;
+		let on_high = high_max_db > MIN_DBFS_ON && (high_max_db - high_runner_db) >= SEP_DB;
+		let twist_ok = (low_max_db - high_max_db).abs() <= TWIST_MAX_DB;
+		let mut candidate_on = if on_low && on_high && twist_ok {
+			Some(implied)
+		} else {
+			None
+		};
+
+		let off_low = low_max_db > MIN_DBFS_OFF && (low_max_db - low_runner_db) >= (SEP_DB - 1.0);
+		let off_high = high_max_db > MIN_DBFS_OFF && (high_max_db - high_runner_db) >= (SEP_DB - 1.0);
+		let still_same_digit =
+			off_low && off_high && Some(implied) == active_digit && (low_max_db - high_max_db).abs() <= (TWIST_MAX_DB + 2.0);
+
+		let low_rise = low_max_db - prev_low_dbfs[low_idx];
+		let high_rise = high_max_db - prev_high_dbfs[high_idx];
+		if let (Some(d_act), Some(d_new)) = (active_digit, candidate_on) {
+			if d_new != d_act && !(low_rise >= RISE_DB && high_rise >= RISE_DB) {
+				candidate_on = None; // treat this split-pair as "no new digit"
+			}
 		}
 
 		// Debounce: only emit when the same candidate persists across HOLD_FRAMES.
-		match (active_digit, candidate_digit) {
+		match (active_digit, candidate_on) {
 			(Some(d), Some(d2)) => {
+				gap_frames = 0;
 				if d == d2 {
 					active_hold_frames += 1;
 				} else {
@@ -109,19 +134,32 @@ pub fn detect_digits(samples: &[i16], sample_rate_hz: f32) -> String {
 					active_hold_frames = 1;
 				}
 			},
-			(Some(d), None) => {
-				if active_hold_frames >= HOLD_FRAMES {
-					digits_out.push(d);
+			(Some(_), None) => {
+				if still_same_digit {
+					active_hold_frames += 1;
+					gap_frames = 0;
+				} else {
+					gap_frames += 1;
+					if gap_frames > GAP_FRAMES {
+						if active_hold_frames >= HOLD_FRAMES {
+							digits_out.push(active_digit.unwrap());
+						}
+						active_digit = None;
+						active_hold_frames = 0;
+						gap_frames = 0;
+					}
 				}
-				active_digit = None;
-				active_hold_frames = 0;
 			},
 			(None, Some(d2)) => {
 				active_digit = Some(d2);
 				active_hold_frames = 1;
+				gap_frames = 0;
 			},
 			(None, None) => { /* nothing stable in this frame */ },
 		}
+
+		prev_low_dbfs = low_group_dbfs;
+		prev_high_dbfs = high_group_dbfs;
 
 		frame_start += hop_len;
 	}
