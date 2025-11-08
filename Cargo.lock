@@ -270,6 +270,9 @@ name = "dtmf"
 version = "1.0.0"
 dependencies = [
  "hound",
+ "serde",
+ "serde_json",
+ "ureq",
 ]
 
 [[package]]
