@@ -1,0 +1,7 @@
+[package]
+name = "visreq"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+oar-ocr = "0.2.2"
