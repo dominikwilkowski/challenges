@@ -1,25 +1,14 @@
-use oar_ocr::prelude::*;
+mod calc;
+mod network;
+mod ocr;
 
-use std::path::Path;
+fn main() {
+	let token = "xxx"; // TODO: change me to your token!
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-	let ocr = OAROCRBuilder::new(
-		"models/ppocrv4_server_det.onnx".to_string(),
-		"models/en_ppocrv4_mobile_rec.onnx".to_string(),
-		"models/en_dict.txt".to_string(),
-	)
-	.build()?;
+	let img_path = crate::network::download_img(token);
+	if let Ok(lines) = crate::ocr::get_text(&img_path) {
+		let result = crate::calc::calc_lines(lines);
 
-	let image = oar_ocr::utils::load_image(Path::new("temp/img.png"))?;
-	let results = ocr.predict(&[image])?;
-	let result = &results[0];
-
-	// Print extracted text with confidence scores using the modern TextRegion API
-	for text_region in &result.text_regions {
-		if let (Some(text), Some(confidence)) = (&text_region.text, text_region.confidence) {
-			println!("Text: {} (confidence: {:.2})", text, confidence);
-		}
+		crate::network::send_secret(result, token);
 	}
-
-	Ok(())
 }

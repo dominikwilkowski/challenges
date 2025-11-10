@@ -2657,6 +2657,9 @@ name = "visreq"
 version = "1.0.0"
 dependencies = [
  "oar-ocr",
+ "serde",
+ "serde_json",
+ "ureq",
 ]
 
 [[package]]
