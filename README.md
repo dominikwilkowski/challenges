@@ -18,6 +18,7 @@
 - [**Zip**](./zip)
 - [**Redis**](./redis)
 - [**DTMF**](./dtmf)
+- [**Visual Recognition**](./visreq)
 
 ## License
 Copyright (c) Dominik Wilkowski.

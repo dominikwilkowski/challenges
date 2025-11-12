@@ -29,10 +29,10 @@ pub fn download_img(token: &str) -> String {
 
 #[derive(Serialize, Debug)]
 pub struct ApiSolve {
-	result: i64,
+	result: i128,
 }
 
-pub fn send_secret(result: i64, token: &str) {
+pub fn send_secret(result: i128, token: &str) {
 	let url = format!("https://hackattic.com/challenges/visual_basic_math/solve?access_token={token}");
 	let mut res = ureq::post(url).send_json(&ApiSolve { result }).unwrap();
 	println!("{}", res.body_mut().read_to_string().unwrap());

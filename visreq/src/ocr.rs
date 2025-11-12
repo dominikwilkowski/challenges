@@ -13,7 +13,11 @@ pub fn get_text(img_path: &str) -> Result<Vec<String>, Box<dyn std::error::Error
 	let image = oar_ocr::utils::load_image(Path::new(img_path))?;
 	let results = ocr.predict(&[image])?;
 
-	let numbers =
-		results[0].text_regions.iter().filter_map(|region| region.text.as_deref().map(ToOwned::to_owned)).collect();
+	let numbers = results[0]
+		.text_regions
+		.iter()
+		.filter_map(|region| region.text.as_deref().map(ToOwned::to_owned))
+		.map(|line| line.replace(" ", "").replace("Q", "0").replace("q", "9").replace("o", "0"))
+		.collect();
 	Ok(numbers)
 }
