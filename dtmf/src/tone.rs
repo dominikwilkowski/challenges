@@ -114,10 +114,11 @@ pub fn detect_digits(samples: &[i16], sample_rate_hz: f32) -> String {
 
 		let low_rise = low_max_db - prev_low_dbfs[low_idx];
 		let high_rise = high_max_db - prev_high_dbfs[high_idx];
-		if let (Some(d_act), Some(d_new)) = (active_digit, candidate_on) {
-			if d_new != d_act && !(low_rise >= RISE_DB && high_rise >= RISE_DB) {
-				candidate_on = None; // treat this split-pair as "no new digit"
-			}
+		if let (Some(d_act), Some(d_new)) = (active_digit, candidate_on)
+			&& d_new != d_act
+			&& !(low_rise >= RISE_DB && high_rise >= RISE_DB)
+		{
+			candidate_on = None; // treat this split-pair as "no new digit"
 		}
 
 		// Debounce: only emit when the same candidate persists across HOLD_FRAMES.
