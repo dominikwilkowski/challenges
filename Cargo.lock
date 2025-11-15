@@ -2666,6 +2666,11 @@ dependencies = [
 [[package]]
 name = "vpn"
 version = "1.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "ureq",
+]
 
 [[package]]
 name = "wasi"
