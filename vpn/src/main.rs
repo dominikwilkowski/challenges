@@ -10,7 +10,9 @@ use std::{
 	time::{Duration, Instant},
 };
 
-pub const COUNTRIES: [&str; 9] = ["all", "fr", "sg", "in", "jp", "it", "us", "uk", "ca"];
+pub const COUNTRIES: [&str; 19] = [
+	"jp", "nl", "vn", "gb", "sg", "ca", "hf", "all", "all", "all", "hg", "hh", "hi", "hj", "all", "in", "de", "all", "oj",
+];
 
 fn main() {
 	let time = Instant::now();
@@ -20,17 +22,16 @@ fn main() {
 	let proxies = crate::proxy::get("us");
 	let presence_token = crate::network::get_token(token);
 
-	// solve before timeout
+	// solve before timeout expires
 	{
 		let stop_clone = Arc::clone(&stop);
 
 		let handle = thread::spawn(move || {
 			thread::sleep(Duration::from_secs(29));
 
-			if !stop_clone.swap(true, Ordering::SeqCst) {
-				crate::network::solve(token);
-				println!("Time taken: {} seconds", time.elapsed().as_secs());
-			}
+			stop_clone.swap(true, Ordering::SeqCst);
+			crate::network::solve(token);
+			println!("Time taken: {} seconds", time.elapsed().as_secs());
 		});
 		handles.push(handle);
 	}
@@ -38,7 +39,7 @@ fn main() {
 	// AU ping
 	crate::network::ping_server(&presence_token);
 
-	// refetched ping
+	// prefetched ping
 	{
 		let presence_token_clone = presence_token.clone();
 		let proxies_clone = proxies.clone();

@@ -43,6 +43,7 @@ pub fn ping_all(token: &str, proxies: Vec<String>, stop: &AtomicBool) {
 			Ok(mut resp) => {
 				let body = resp.body_mut().read_to_string().unwrap();
 				println!("{body}");
+				break;
 			},
 			Err(_error) => {
 				// println!("Failed request: {error}");
