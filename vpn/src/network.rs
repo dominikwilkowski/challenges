@@ -1,4 +1,10 @@
 use serde::{Deserialize, Serialize};
+use ureq::{Agent, Proxy};
+
+use std::{
+	sync::atomic::{AtomicBool, Ordering},
+	time::Duration,
+};
 
 #[derive(Deserialize, Debug)]
 pub struct ApiResp {
@@ -13,17 +19,35 @@ pub fn get_token(token: &str) -> String {
 	data.presence_token
 }
 
-pub fn ping_server(token: &str, region: &str) {
+pub fn ping_server(token: &str) {
 	let url = format!("https://hackattic.com/_/presence/{token}");
-	if let Ok(mut resp) = ureq::get(url).call() {
-		let body = resp.body_mut().read_to_string().unwrap();
-		if body.contains(region) {
-			println!("{body}");
-		} else {
-			ping_server(token, region);
+	let mut resp = ureq::get(url).call().unwrap();
+	let body = resp.body_mut().read_to_string().unwrap();
+	println!("{body}");
+}
+
+pub fn ping_all(token: &str, proxies: Vec<String>, stop: &AtomicBool) {
+	for proxy in proxies {
+		if stop.load(Ordering::Relaxed) {
+			println!("Overshot timeout; stopping");
+			break;
 		}
-	} else {
-		ping_server(token, region);
+
+		let proxy = Proxy::new(&format!("http://{proxy}")).unwrap();
+
+		let agent: Agent =
+			Agent::config_builder().proxy(Some(proxy)).timeout_connect(Some(Duration::from_secs(5))).build().into();
+
+		let url = format!("https://hackattic.com/_/presence/{token}");
+		match agent.get(url).call() {
+			Ok(mut resp) => {
+				let body = resp.body_mut().read_to_string().unwrap();
+				println!("{body}");
+			},
+			Err(_error) => {
+				// println!("Failed request: {error}");
+			},
+		}
 	}
 }
 
