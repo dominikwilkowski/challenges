@@ -19,6 +19,8 @@
 - [**Redis**](./redis)
 - [**DTMF**](./dtmf)
 - [**Visual Recognition**](./visreq)
+- [**VPN**](./vpn)
+- [**FizzBuzz**](./fizzbuzz)
 
 ## License
 Copyright (c) Dominik Wilkowski.

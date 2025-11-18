@@ -1,3 +1,19 @@
 [workspace]
-members = ["ranges", "lru", "calc", "server", "fibonacci", "robot", "recursion_worker", "trains", "postfix_csv", "zip", "redis", "dtmf", "visreq", "vpn"]
+members = [
+	"ranges",
+	"lru",
+	"calc",
+	"server",
+	"fibonacci",
+	"robot",
+	"recursion_worker",
+	"trains",
+	"postfix_csv",
+	"zip",
+	"redis",
+	"dtmf",
+	"visreq",
+	"vpn",
+	"fizzbuzz",
+]
 resolver = "3"
