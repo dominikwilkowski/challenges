@@ -21,6 +21,7 @@
 - [**Visual Recognition**](./visreq)
 - [**VPN**](./vpn)
 - [**FizzBuzz**](./fizzbuzz)
+- [**Hungarian Snake**](./hungarian_snake)
 
 ## License
 Copyright (c) Dominik Wilkowski.
