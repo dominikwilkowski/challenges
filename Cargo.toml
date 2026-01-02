@@ -15,6 +15,6 @@ members = [
 	"visreq",
 	"vpn",
 	"fizzbuzz",
-	"hungarian_snake", "epoch", "parens",
+	"hungarian_snake", "epoch", "parens", "compression",
 ]
 resolver = "3"

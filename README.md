@@ -22,6 +22,9 @@
 - [**VPN**](./vpn)
 - [**FizzBuzz**](./fizzbuzz)
 - [**Hungarian Snake**](./hungarian_snake)
+- [**Epoch**](./epoch)
+- [**Parens**](./parens)
+- [**Compression**](./compression)
 
 ## License
 Copyright (c) Dominik Wilkowski.
