@@ -59,3 +59,15 @@ fn main() {
 
 	println!("{}", output.trim());
 }
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn compress_test() {
+		assert_eq!(convert_to_snake("szWindowContents"), String::from("window_contents"));
+		assert_eq!(convert_to_snake("iAirflowParameter"), String::from("airflow_parameter"));
+		assert_eq!(convert_to_snake("fMixtureRatio"), String::from("mixture_ratio"));
+	}
+}

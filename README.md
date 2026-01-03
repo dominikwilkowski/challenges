@@ -25,6 +25,7 @@
 - [**Epoch**](./epoch)
 - [**Parens**](./parens)
 - [**Compression**](./compression)
+- [**Binary**](./binary)
 
 ## License
 Copyright (c) Dominik Wilkowski.
