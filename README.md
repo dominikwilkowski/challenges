@@ -26,6 +26,7 @@
 - [**Parens**](./parens)
 - [**Compression**](./compression)
 - [**Binary**](./binary)
+- [**JSON**](./json)
 
 ## License
 Copyright (c) Dominik Wilkowski.
