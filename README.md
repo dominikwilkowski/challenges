@@ -27,6 +27,7 @@
 - [**Compression**](./compression)
 - [**Binary**](./binary)
 - [**JSON**](./json)
+- [**Sum**](./sum)
 
 ## License
 Copyright (c) Dominik Wilkowski.
