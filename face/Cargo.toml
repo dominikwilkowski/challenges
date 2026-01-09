@@ -7,3 +7,5 @@ edition = "2024"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ureq = { version = "3", features = ["json"] }
+rustface = "0.1.7"
+image = "0.25"

@@ -16,7 +16,7 @@ pub fn download_img(token: &str) -> String {
 	let data = resp.body_mut().read_json::<ApiResp>().unwrap();
 
 	create_dir_all("temp").unwrap();
-	let img_path = String::from("temp/img.png");
+	let img_path = String::from("temp/img.jpg");
 
 	let mut wav_resp = ureq::get(&data.image_url).call().unwrap();
 	let mut body = wav_resp.body_mut().with_config().limit(20 * 1024 * 1024).reader();
