@@ -7,10 +7,7 @@ fn main() {
 	let img_path = crate::network::download_img(token);
 
 	let mut detector = rustface::create_detector("model/seeta_fd_frontal_v1.0.bin").unwrap();
-	// detector.set_min_face_size(20);
-	// detector.set_score_thresh(2.0);
-	// detector.set_pyramid_scale_factor(0.8);
-	// detector.set_slide_window_step(4, 4);
+	detector.set_score_thresh(0.95);
 
 	let gray = image::open(img_path).unwrap().to_luma8();
 	let width = gray.width() as usize;

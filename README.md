@@ -28,6 +28,7 @@
 - [**Binary**](./binary)
 - [**JSON**](./json)
 - [**Sum**](./sum)
+- [**Face**](./face)
 
 ## License
 Copyright (c) Dominik Wilkowski.
