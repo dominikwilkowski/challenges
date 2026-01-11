@@ -29,6 +29,7 @@
 - [**JSON**](./json)
 - [**Sum**](./sum)
 - [**Face**](./face)
+- [**DNS**](./dns)
 
 ## License
 Copyright (c) Dominik Wilkowski.

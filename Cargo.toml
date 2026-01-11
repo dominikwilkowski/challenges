@@ -22,6 +22,6 @@ members = [
 	"binary",
 	"json",
 	"sum",
-	"base64", "face",
+	"base64", "face", "dns",
 ]
 resolver = "3"

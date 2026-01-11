@@ -473,6 +473,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dns"
+version = "1.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "document-features"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
