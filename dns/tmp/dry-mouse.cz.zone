@@ -1,0 +1,23 @@
+$ORIGIN broad-pond.um.
+$TTL 60
+
+@   IN  SOA ns1.broad-pond.um. hostmaster.broad-pond.um. (
+        1   ; serial
+        60  ; refresh
+        60  ; retry
+        60  ; expire
+        60  ; minimum
+)
+    IN  NS  ns1.broad-pond.um.
+
+; Records for broad-pond.um
+@   IN  A     8.164.231.7
+@   IN  AAAA  10::f72e:5759:4978:59e1
+
+; RP = (mailbox-domain-name) (txt-domain-name)
+; "abuse.broad-pond.um." corresponds to abuse@broad-pond.um
+; second field "." means “no TXT record with extra info”
+@   IN  RP    abuse.broad-pond.um.  .
+
+; Wildcard TXT for *.broad-pond.um
+*   IN  TXT   "aHR0cDovL3d3dy5yZmMtZWRpdG9yLm9yZy9yZmMvcmZjMTExOC50eHQ="
