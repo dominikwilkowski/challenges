@@ -1,10 +1,11 @@
 mod network;
+mod zone;
 
 fn main() {
 	let token = "xxx"; // TODO: change me to your token!
 
 	let records = crate::network::download_records(token);
-	println!("{records:?}");
+	crate::zone::generate_zone_file(records);
 
 	// TODO:
 	// get IP + port

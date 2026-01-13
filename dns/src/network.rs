@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub enum RecordType {
 	A,
 	AAAA,
@@ -10,10 +10,10 @@ pub enum RecordType {
 
 #[derive(Deserialize, Debug)]
 pub struct Record {
-	name: String,
+	pub name: String,
 	#[serde(rename = "type")]
-	record_type: RecordType,
-	data: String,
+	pub record_type: RecordType,
+	pub data: String,
 }
 
 #[derive(Deserialize, Debug)]

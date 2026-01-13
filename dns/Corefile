@@ -1,10 +1,10 @@
-.:5353 {
+.:55353 {
   bind 127.0.0.1
   log
   errors
 
   auto {
-    directory ./tmp
+    directory ./temp
     reload 2s
   }
 }
