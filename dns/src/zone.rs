@@ -39,5 +39,5 @@ $TTL 60
 		}
 	}
 
-	let _ = fs::write(format!("temp/{domain}"), zone_file);
+	let _ = fs::write(format!("temp/db.{domain}"), zone_file);
 }
