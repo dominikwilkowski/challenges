@@ -22,6 +22,6 @@ members = [
 	"binary",
 	"json",
 	"sum",
-	"base64", "face", "dns",
+	"base64", "face", "dns", "concurrent_web_fetcher",
 ]
 resolver = "3"

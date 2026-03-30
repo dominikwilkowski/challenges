@@ -30,6 +30,7 @@
 - [**Sum**](./sum)
 - [**Face**](./face)
 - [**DNS**](./dns)
+- [**concurrent Web Fetcher**](./concurrent_web_fetcher)
 
 ## License
 Copyright (c) Dominik Wilkowski.
