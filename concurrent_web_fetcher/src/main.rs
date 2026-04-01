@@ -1,8 +1,30 @@
 use std::{env::args, time::Instant};
 
-fn main() {
+#[tokio::main]
+async fn main() {
 	let start_time = Instant::now();
 	let urls = args().skip(1).collect::<Vec<String>>();
+	let mut handles = Vec::new();
 
-	println!("{urls:?}");
+	for url in urls {
+		handles.push(tokio::spawn(async move {
+			do_url(&url);
+		}));
+	}
+
+	for handle in handles {
+		let _ = handle.await;
+	}
+
+	println!("\nLookup has taken {}ms", start_time.elapsed().as_millis());
+}
+
+fn do_url(url: &str) {
+	let start_time = Instant::now();
+	let code = match ureq::get(url).call() {
+		Ok(response) => response.status().as_u16(),
+		Err(ureq::Error::StatusCode(code)) => code,
+		Err(_) => 0,
+	};
+	println!("{url}: {code} in {}ms", start_time.elapsed().as_millis());
 }
