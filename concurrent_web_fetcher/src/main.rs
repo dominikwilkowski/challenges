@@ -8,7 +8,8 @@ async fn main() {
 
 	for url in urls {
 		handles.push(tokio::spawn(async move {
-			do_url(&url);
+			let UrlResponds { url, time, code } = do_url(url);
+			println!("{url}: {code} in {time}ms");
 		}));
 	}
 
@@ -19,12 +20,23 @@ async fn main() {
 	println!("\nLookup has taken {}ms", start_time.elapsed().as_millis());
 }
 
-fn do_url(url: &str) {
+struct UrlResponds {
+	url: String,
+	time: u128,
+	code: u16,
+}
+
+fn do_url(url: String) -> UrlResponds {
 	let start_time = Instant::now();
-	let code = match ureq::get(url).call() {
+	let code = match ureq::get(&url).call() {
 		Ok(response) => response.status().as_u16(),
 		Err(ureq::Error::StatusCode(code)) => code,
 		Err(_) => 0,
 	};
-	println!("{url}: {code} in {}ms", start_time.elapsed().as_millis());
+
+	UrlResponds {
+		url,
+		time: start_time.elapsed().as_millis(),
+		code,
+	}
 }
