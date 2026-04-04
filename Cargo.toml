@@ -22,6 +22,6 @@ members = [
 	"binary",
 	"json",
 	"sum",
-	"base64", "face", "dns", "concurrent_web_fetcher",
+	"base64", "face", "dns", "concurrent_web_fetcher", "rate-limited-tsk-queue",
 ]
 resolver = "3"

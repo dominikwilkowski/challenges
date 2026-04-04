@@ -31,6 +31,7 @@
 - [**Face**](./face)
 - [**DNS**](./dns)
 - [**concurrent Web Fetcher**](./concurrent_web_fetcher)
+- [**Rate-limited task queue**](./rate-limited-task-queue)
 
 ## License
 Copyright (c) Dominik Wilkowski.
