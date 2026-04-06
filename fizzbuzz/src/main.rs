@@ -4,31 +4,31 @@ use std::{
 };
 
 #[derive(Debug)]
-enum FizzBuzz {
+enum Term {
 	Value(u64),
 	Fizz,
 	Buzz,
 	FizzBuzz,
 }
 
-impl fmt::Display for FizzBuzz {
+impl fmt::Display for Term {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match self {
-			FizzBuzz::Value(number) => write!(f, "{number}"),
-			FizzBuzz::Fizz => write!(f, "Fizz"),
-			FizzBuzz::Buzz => write!(f, "Buzz"),
-			FizzBuzz::FizzBuzz => write!(f, "FizzBuzz"),
+			Term::Value(number) => write!(f, "{number}"),
+			Term::Fizz => write!(f, "Fizz"),
+			Term::Buzz => write!(f, "Buzz"),
+			Term::FizzBuzz => write!(f, "FizzBuzz"),
 		}
 	}
 }
 
-fn fizz_buzz_me(n: u64) -> FizzBuzz {
-	return match (n % 3, n % 5) {
-		(0, 0) => FizzBuzz::FizzBuzz,
-		(0, _) => FizzBuzz::Fizz,
-		(_, 0) => FizzBuzz::Buzz,
-		_ => FizzBuzz::Value(n),
-	};
+fn fizz_buzz_me(n: u64) -> Term {
+	match (n % 3, n % 5) {
+		(0, 0) => Term::FizzBuzz,
+		(0, _) => Term::Fizz,
+		(_, 0) => Term::Buzz,
+		_ => Term::Value(n),
+	}
 }
 
 fn main() {
