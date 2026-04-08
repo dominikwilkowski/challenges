@@ -25,14 +25,14 @@ fn parse(input: &str) -> Line {
 	let name = input[2..name_end].to_string();
 
 	let balance_start = input.rfind("\"balance\": ").expect("No balance start found") + 11;
-	let balance_end = if let Some(_) = input.find("\"extra\"") {
+	let balance_end = if input.find("\"extra\"").is_some() {
 		input.rfind("}}").expect("No balance end found in extra branch")
 	} else {
 		input.rfind(", \"account_number").expect("No balance end found")
 	};
 	let balance = input[balance_start..balance_end]
 		.parse()
-		.unwrap_or_else(|_| panic!("Could not parse balance \"{}\"", input[balance_start..balance_end].to_string()));
+		.unwrap_or_else(|_| panic!("Could not parse balance \"{}\"", &input[balance_start..balance_end]));
 
 	Line { name, balance }
 }
@@ -50,7 +50,7 @@ fn format_i64_commas(n: i64) -> String {
 	for (i, &b) in bytes.iter().enumerate() {
 		out.push(b as char);
 		let left = len - i - 1;
-		if left > 0 && left % 3 == 0 {
+		if left > 0 && left.is_multiple_of(3) {
 			out.push(',');
 		}
 	}
