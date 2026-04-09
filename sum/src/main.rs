@@ -17,15 +17,15 @@ fn parse(input: &str) -> u64 {
 	let mut nums = Vec::new();
 
 	for item in input.split(" ") {
-		if item.starts_with("0b") {
+		if let Some(binary) = item.strip_prefix("0b") {
 			// binary
-			nums.push(u64::from_str_radix(&item[2..], 2).unwrap_or_else(|_| panic!("Invalid binary item: {}", item)));
-		} else if item.starts_with("0o") {
+			nums.push(u64::from_str_radix(binary, 2).unwrap_or_else(|_| panic!("Invalid binary item: {}", item)));
+		} else if let Some(octal) = item.strip_prefix("0o") {
 			// octal
-			nums.push(u64::from_str_radix(&item[2..], 8).unwrap_or_else(|_| panic!("Invalid octal item: {}", item)));
-		} else if item.starts_with("0x") {
+			nums.push(u64::from_str_radix(octal, 8).unwrap_or_else(|_| panic!("Invalid octal item: {}", item)));
+		} else if let Some(hex) = item.strip_prefix("0x") {
 			// hex
-			nums.push(u64::from_str_radix(&item[2..], 16).unwrap_or_else(|_| panic!("Invalid hex item: {}", item)));
+			nums.push(u64::from_str_radix(hex, 16).unwrap_or_else(|_| panic!("Invalid hex item: {}", item)));
 		} else if item.bytes().all(|b| b.is_ascii_digit()) {
 			// decimal
 			nums.push(item.parse::<u64>().unwrap());
