@@ -28,10 +28,12 @@
 - [**Binary**](./binary)
 - [**JSON**](./json)
 - [**Sum**](./sum)
+- [**Base64**](./base64)
 - [**Face**](./face)
 - [**DNS**](./dns)
 - [**concurrent Web Fetcher**](./concurrent_web_fetcher)
 - [**Rate-limited task queue**](./rate-limited-task-queue)
+- [**Chat**](./chat)
 
 ## License
 Copyright (c) Dominik Wilkowski.

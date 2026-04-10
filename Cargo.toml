@@ -26,6 +26,6 @@ members = [
 	"face",
 	"dns",
 	"concurrent_web_fetcher",
-	"rate-limited-task-queue",
+	"rate-limited-task-queue", "chat",
 ]
 resolver = "3"
