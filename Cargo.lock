@@ -269,7 +269,10 @@ dependencies = [
 
 [[package]]
 name = "chat"
-version = "0.1.0"
+version = "1.0.0"
+dependencies = [
+ "tokio",
+]
 
 [[package]]
 name = "chrono"
@@ -2035,7 +2038,7 @@ version = "1.0.0"
 
 [[package]]
 name = "rate-limited-tsk-queue"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "rand 0.10.0",
  "tokio",

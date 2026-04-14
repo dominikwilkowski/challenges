@@ -13,7 +13,7 @@ Build a TCP chat server where multiple clients connect and messages are broadcas
 
 How to test it:
 - Run your server with cargo run --bin hw3
-- Open 2-3 terminals and connect with: telnet 127.0.0.1 8080 (or `ncat`, or Test-NetConnection + a simple TCP client)
+- Open 2-3 terminals and connect with: `nc 127.0.0.1 8080` (or `ncat`, or Test-NetConnection + a simple TCP client)
 - Type messages in one terminal and see them appear in the others
 
 Hints:
