@@ -68,7 +68,11 @@ impl Args {
 	}
 
 	pub fn help() -> String {
-		format!("{name} v{version}\n\nUsage: $ {name} [path/to/csv] [OPTIONS]\n\nOptions:\n  -V, --version        Print version info and exit\n  -h, --help           Print help and exit\n  -s, --separator \",\"  Set the separator for the CSV\n  -x, --overwrite      Allow to overwrite the output file if it exists\n", name = env!("CARGO_PKG_NAME"), version = env!("CARGO_PKG_VERSION"))
+		format!(
+			"{name} v{version}\n\nUsage: $ {name} [path/to/csv] [OPTIONS]\n\nOptions:\n  -V, --version        Print version info and exit\n  -h, --help           Print help and exit\n  -s, --separator \",\"  Set the separator for the CSV\n  -x, --overwrite      Allow to overwrite the output file if it exists\n",
+			name = env!("CARGO_PKG_NAME"),
+			version = env!("CARGO_PKG_VERSION")
+		)
 	}
 
 	pub fn version() -> String {
@@ -319,13 +323,17 @@ fn parse_test_failiure() {
 
 	let output = std::process::Command::new("cargo").args(&["run", "--", "path/to/somehwere", "-s"]).output().unwrap();
 	assert!(!output.status.success());
-	assert!(String::from_utf8_lossy(&output.stderr)
-		.contains("The flag `--separator` is missing its argument to specifiy what the separator is"));
+	assert!(
+		String::from_utf8_lossy(&output.stderr)
+			.contains("The flag `--separator` is missing its argument to specifiy what the separator is")
+	);
 	assert!(String::from_utf8_lossy(&output.stdout).is_empty());
 
 	let output = std::process::Command::new("cargo").args(&["run", "--", "path/to/somehwere", "-o"]).output().unwrap();
 	assert!(!output.status.success());
-	assert!(String::from_utf8_lossy(&output.stderr)
-		.contains("The flag `--out` is missing its argument to specifiy where to save the output to"));
+	assert!(
+		String::from_utf8_lossy(&output.stderr)
+			.contains("The flag `--out` is missing its argument to specifiy where to save the output to")
+	);
 	assert!(String::from_utf8_lossy(&output.stdout).is_empty());
 }

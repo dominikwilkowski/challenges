@@ -208,7 +208,11 @@ fn calc_cell_test() {
 			data: Vec::new(),
 			separator: ',',
 		})
-		.calc_cell(&Coord { column: 0, row: 0 }, "          8 ? 19.5 # 6  / : * 3  1.5  14 - +      * ", &mut Vec::new()),
+		.calc_cell(
+			&Coord { column: 0, row: 0 },
+			"          8 ? 19.5 # 6  / : * 3  1.5  14 - +      * ",
+			&mut Vec::new()
+		),
 		Ok(-247.0)
 	);
 

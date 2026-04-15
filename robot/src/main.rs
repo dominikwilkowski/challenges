@@ -47,22 +47,22 @@ impl Wearhouse {
 				if self.position.0 != 0 {
 					self.position.0 -= 1;
 				}
-			}
+			},
 			Direction::West => {
 				if self.position.1 != 0 {
 					self.position.1 -= 1;
 				}
-			}
+			},
 			Direction::East => {
 				if self.position.1 != self.size.1 - 1 {
 					self.position.1 += 1;
 				}
-			}
+			},
 			Direction::South => {
 				if self.position.0 != self.size.0 - 1 {
 					self.position.0 += 1;
 				}
-			}
+			},
 		}
 	}
 
@@ -72,7 +72,7 @@ impl Wearhouse {
 			"W" => self.moving(Direction::West),
 			"E" => self.moving(Direction::East),
 			"S" => self.moving(Direction::South),
-			_ => {}
+			_ => {},
 		});
 	}
 }
