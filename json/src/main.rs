@@ -10,7 +10,7 @@ fn main() {
 		output.push(parse(line));
 	}
 
-	output.sort_by(|a, b| a.balance.cmp(&b.balance));
+	output.sort_by_key(|a| a.balance);
 	output.iter().for_each(|Line { name, balance }| println!("{name}: {}", format_i64_commas(*balance)));
 }
 
